@@ -88,10 +88,7 @@ fun EmployeeDetailScreen(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    ProfileAvatar(
-                        initial = employee.name.first().toString(),
-                        size = 80
-                    )
+                    ProfileAvatar(size = 80, photoUrl = employee.photoUrl)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = employee.name,

@@ -1,6 +1,7 @@
 package com.example.whoareyou.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -12,7 +13,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.whoareyou.model.Employee
+import com.example.whoareyou.model.EmployeeRepository
 import com.example.whoareyou.model.MockData
+import com.example.whoareyou.ui.screens.AddPhoneScreen
+import com.example.whoareyou.ui.screens.CallHistoryScreen
 import com.example.whoareyou.ui.screens.EmployeeDetailScreen
 import com.example.whoareyou.ui.screens.FavoritesScreen
 import com.example.whoareyou.ui.screens.HomeScreen
@@ -37,6 +41,8 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Info : Screen("info")
     object PhoneSettings : Screen("phone_settings")
+    object AddPhone : Screen("add_phone")
+    object CallHistory : Screen("call_history")
 }
 
 @Composable
@@ -44,7 +50,16 @@ fun AppNavigation() {
     val navController = rememberNavController()
     var isLoggedIn by remember { mutableStateOf(false) }
     var loggedInEmployee by remember { mutableStateOf<Employee?>(null) }
+    // 초기값은 MockData (API 호출 전 즉시 표시), 이후 LaunchedEffect에서 API 결과로 교체됨
     val employees = remember { mutableStateListOf<Employee>().also { it.addAll(MockData.employees) } }
+
+    // 앱 시작 시 API에서 임직원 목록을 불러옵니다.
+    // API 실패 시 초기값 MockData가 그대로 유지됩니다.
+    LaunchedEffect(Unit) {
+        val loaded = EmployeeRepository.loadEmployees()
+        employees.clear()
+        employees.addAll(loaded)
+    }
 
     NavHost(
         navController = navController,
@@ -82,7 +97,9 @@ fun AppNavigation() {
                 onNavigateToTeam = { navController.navigate(Screen.Team.route) },
                 onNavigateToOrgChart = { navController.navigate(Screen.OrgChart.route) },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToInfo = { navController.navigate(Screen.Info.route) }
+                onNavigateToInfo = { navController.navigate(Screen.Info.route) },
+                onNavigateToAddPhone = { navController.navigate(Screen.AddPhone.route) },
+                onNavigateToCallHistory = { navController.navigate(Screen.CallHistory.route) }
             )
         }
 
@@ -166,6 +183,14 @@ fun AppNavigation() {
 
         composable(Screen.PhoneSettings.route) {
             PhoneSettingsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AddPhone.route) {
+            AddPhoneScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.CallHistory.route) {
+            CallHistoryScreen(onBack = { navController.popBackStack() })
         }
     }
 }

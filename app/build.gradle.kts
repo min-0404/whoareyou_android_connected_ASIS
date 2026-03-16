@@ -39,6 +39,10 @@ android {
     }
 }
 
+kotlin {
+    jvmToolchain(11)
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -49,6 +53,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
+    // 이미지 자동 다운로드 + 캐시 라이브러리
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    // 확장 Material 아이콘 (CallReceived, CallMade, CallMissed 등)
+    implementation("androidx.compose.material:material-icons-extended")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

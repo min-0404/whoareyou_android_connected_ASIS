@@ -2,10 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -28,14 +31,28 @@
             </intent-filter>
         </activity>
 
-        <!-- 수신 전화 오버레이 팝업 Activity -->
+        <!-- Android 13 이하: fullScreenIntent 로 수신화면 위에 발신자 정보 표시 -->
+        <!-- 구형 Samsung One UI z-order 문제 대응 (TYPE_APPLICATION_OVERLAY 미표시 기기) -->
         <activity
-            android:name=".call.CallOverlayActivity"
+            android:name=".call.CallInfoActivity"
             android:exported="false"
-            android:theme="@style/Theme.WhoAreYou.Transparent"
-            android:showOnLockScreen="true"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:launchMode="singleInstance" />
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.WhoAreYou.Transparent" />
+
+        <!-- 발신 통화 기록용 백그라운드 서비스 -->
+        <service
+            android:name=".call.CallMonitorService"
+            android:exported="false" />
+
+        <!-- 수신 전화 WindowManager 오버레이 포그라운드 서비스 -->
+        <!-- shortService: Android 14+에서 역할(Role) 없이도 백그라운드에서 시작 가능, 최대 3분 제한 -->
+        <service
+            android:name=".call.CallInfoOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
 
         <!-- CallScreeningService: 전화 스크리닝 앱으로 등록 -->
         <service

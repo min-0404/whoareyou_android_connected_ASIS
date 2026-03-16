@@ -76,8 +76,8 @@ fun LoginScreen(onLoginSuccess: (Employee) -> Unit) {
                     .clip(RoundedCornerShape(24.dp))
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.whoareyou_icon),
-                    contentDescription = "WhoAreYou 앱 아이콘",
+                    painter = painterResource(id = R.drawable.main_image),
+                    contentDescription = "BC카드 로고",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -86,7 +86,7 @@ fun LoginScreen(onLoginSuccess: (Employee) -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "WhoAreYou",
+                text = "후아유",
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary

@@ -172,7 +172,7 @@ fun EmployeeRow(employee: Employee, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ProfileAvatar(initial = employee.name.first().toString(), size = 48)
+            ProfileAvatar(size = 48, photoUrl = employee.photoUrl)
 
             Spacer(modifier = Modifier.width(14.dp))
 
