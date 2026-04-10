@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.example.whoareyou.navigation.AppNavigation
+import com.example.whoareyou.network.AuthManager
 import com.example.whoareyou.ui.theme.WhoAreYouTheme
 
 class MainActivity : ComponentActivity() {
@@ -33,6 +34,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // AuthManager 초기화: SharedPreferences 에서 저장된 세션(authKey, loginEmpNo 등)을 로드한다.
+        // setContent() 보다 먼저 호출해야 Composable 에서 로그인 상태를 올바르게 읽을 수 있다.
+        AuthManager.init(this)
 
         // 오버레이 권한이 없으면 최초 1회 요청
         if (!Settings.canDrawOverlays(this)) {

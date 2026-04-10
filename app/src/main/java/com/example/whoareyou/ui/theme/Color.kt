@@ -24,6 +24,10 @@ val AccentPurple = Color(0xFF8C4CF2)
 // Call green
 val CallGreen = Color(0xFF21BF72)
 
+// Soft call button colors (연하고 부드러운 전화버튼 색상)
+val SoftCallGreen = Color(0xFF35C07A)   // 밝은 초록
+val SoftCallBlue  = Color(0xFF6698D0)   // 연한 코발트-블루
+
 // Badge colors
 val BadgeBackground = Color(0xFFE0EDFF)
 val BadgeText = Color(0xFF1F47A6)

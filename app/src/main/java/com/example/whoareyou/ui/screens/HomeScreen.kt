@@ -4,12 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
-import coil.compose.AsyncImage
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,13 +57,16 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
+                .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = painterResource(id = R.drawable.app_icon),
+                painter = painterResource(id = R.drawable.top_logo),
                 contentDescription = "BC카드 로고",
-                modifier = Modifier.height(28.dp),
+                modifier = Modifier
+                    .height(40.dp)
+                    .background(Color.White),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -89,11 +92,12 @@ fun HomeScreen(
             }
         }
 
-        // 콘텐츠 영역 (스크롤 없음, 남은 화면 채움)
+        // 콘텐츠 영역 (스크롤 가능)
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 내 프로필 카드 (고정 높이)
@@ -166,56 +170,6 @@ fun HomeScreen(
                 )
             }
 
-            // 전화번호부 업데이트 안내 카드 (고정 높이)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToSettings() },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryLight),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = Primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "전화번호부 업데이트",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "설정에서 주기적으로 데이터베이스 업데이트를 눌러주세요",
-                            fontSize = 11.sp,
-                            color = TextSecondary
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = TextSecondary.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
         }
 
         // 하단 탭바 (고정 높이)
@@ -223,6 +177,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
+                .navigationBarsPadding()
                 .padding(vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
@@ -287,7 +242,7 @@ fun MyProfileCard(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ProfileAvatar(size = 54, photoUrl = employee.photoUrl)
+            ProfileAvatar(size = 54, name = employee.name)
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -417,37 +372,49 @@ fun BottomTabItem(
     }
 }
 
-// 프로필 아바타
-// - photoUrl 있음 → Coil 다운로드 + 캐시 (로딩 중·실패 시 default_profile_icon 표시)
-// - photoUrl 없음 → default_profile_icon 즉시 표시
+// ─────────────────────────────────────────────────────────────────────────────
+// 공통 프로필 아바타 컴포넌트
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 직원 프로필 아바타를 표시합니다.
+ *
+ * Base64 이미지 로딩 대신 이름의 첫 글자를 원형 배경 위에 표시합니다.
+ * 모든 화면에서 일관된 아바타 스타일을 유지합니다.
+ *
+ * @param name     직원 이름 (첫 글자를 아바타에 표시)
+ * @param size     아바타 크기 (dp)
+ * @param modifier Modifier
+ */
 @Composable
 fun ProfileAvatar(
+    name: String,
     size: Int,
-    photoUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .size(size.dp)
-            .clip(CircleShape),
+            .clip(CircleShape)
+            .background(PrimaryLight),
         contentAlignment = Alignment.Center
     ) {
-        if (photoUrl != null) {
-            AsyncImage(
-                model = photoUrl,
-                contentDescription = "프로필 이미지",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.default_profile_icon),
-                error = painterResource(id = R.drawable.default_profile_icon)
-            )
-        } else {
-            Image(
-                painter = painterResource(id = R.drawable.default_profile_icon),
-                contentDescription = "프로필 이미지",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        }
+        Text(
+            text       = name.firstOrNull()?.toString() ?: "?",
+            color      = Primary,
+            fontWeight = FontWeight.Bold,
+            fontSize   = (size * 0.4f).sp
+        )
     }
+}
+
+// PhotoUrl 파라미터를 받는 레거시 시그니처 (하위 호환용 - 이름으로 위임)
+@Composable
+fun ProfileAvatar(
+    size: Int,
+    photoUrl: String? = null,
+    name: String = "?",
+    modifier: Modifier = Modifier
+) {
+    ProfileAvatar(name = name, size = size, modifier = modifier)
 }

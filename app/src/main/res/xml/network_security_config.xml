@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    네트워크 보안 설정 (Network Security Configuration)
+    참고: https://developer.android.com/training/articles/security-config
+
+    Android 7.0(API 24)부터 앱은 기본적으로 시스템 CA만 신뢰하며
+    cleartext(HTTP) 트래픽을 차단한다. 이 파일로 개발 환경 예외를 추가한다.
+
+    운영 환경(isrnd.bccard.com)은 HTTPS를 사용하지만 자체 서명 인증서를
+    사용하는 경우가 있어 domain-config 를 통해 명시적으로 허용한다.
+-->
+<network-security-config>
+
+    <!--
+        개발/스테이징 서버 설정:
+        - isrnd.bccard.com 및 모든 서브도메인에 대해 cleartext(HTTP) 트래픽 허용
+        - 자체 서명 인증서 또는 내부 CA를 사용하는 경우 시스템 신뢰 저장소로 검증
+        - cleartextTrafficPermitted="true" : HTTP 연결 허용 (개발 서버 대응)
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">isrnd.bccard.com</domain>
+    </domain-config>
+
+    <!--
+        디버그 빌드 전용 오버라이드:
+        - 개발자 기기에 설치된 사용자 CA 인증서를 신뢰 앵커에 추가
+        - Charles Proxy, mitmproxy 등 프록시 도구로 HTTPS 트래픽 디버깅 시 필요
+        - 릴리스 빌드(debug-overrides)에는 적용되지 않으므로 배포 시 보안 위험 없음
+    -->
+    <debug-overrides>
+        <trust-anchors>
+            <!-- 사용자가 기기에 직접 설치한 CA 인증서를 신뢰 (디버그 빌드에서만 유효) -->
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+
+</network-security-config>

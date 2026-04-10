@@ -18,9 +18,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.whoareyou.ui.theme.*
-import kotlinx.coroutines.delay
+import com.example.whoareyou.network.ApiClient
+import com.example.whoareyou.network.ApiConstants
+import com.example.whoareyou.network.AuthManager
 import kotlinx.coroutines.launch
 
+/**
+ * 설정 화면
+ *
+ * 전화번호 설정, 가이드, 로그아웃을 제공합니다.
+ * 임직원 데이터는 로컬에 저장되지 않으므로 (보안팀 지침)
+ * 데이터베이스 업데이트/초기화 기능은 포함되지 않습니다.
+ *
+ * @param onBack                    뒤로가기 콜백
+ * @param onLogout                  로그아웃 완료 후 로그인 화면으로 이동 콜백
+ * @param onNavigateToInfo          가이드 화면으로 이동 콜백
+ * @param onNavigateToPhoneSettings 전화번호 설정 화면으로 이동 콜백
+ */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -28,23 +42,21 @@ fun SettingsScreen(
     onNavigateToInfo: () -> Unit,
     onNavigateToPhoneSettings: () -> Unit
 ) {
-    var showUpdateDialog by remember { mutableStateOf(false) }
-    var showResetDbDialog by remember { mutableStateOf(false) }
-    var showResetUserDialog by remember { mutableStateOf(false) }
-    var isUpdating by remember { mutableStateOf(false) }
-    var updateDone by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var isLoggingOut     by remember { mutableStateOf(false) }
+    val scope            = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
     ) {
-        // Top bar
+        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -52,10 +64,10 @@ fun SettingsScreen(
                 Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "뒤로가기", tint = TextPrimary)
             }
             Text(
-                text = "설정",
-                fontSize = 18.sp,
+                text       = "설정",
+                fontSize   = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color      = TextPrimary
             )
         }
 
@@ -70,27 +82,27 @@ fun SettingsScreen(
             SettingsSectionHeader(title = "비씨후아유")
 
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground),
+                shape     = RoundedCornerShape(16.dp),
+                colors    = CardDefaults.cardColors(containerColor = CardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     SettingsRow(
-                        icon = Icons.Default.Phone,
+                        icon     = Icons.Default.Phone,
                         iconColor = AccentGreen,
-                        title = "전화번호 설정",
+                        title    = "전화번호 설정",
                         subtitle = "발신자 표시 설정",
                         trailingContent = {
                             Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
                         },
                         onClick = onNavigateToPhoneSettings
                     )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Background)
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Background)
                     SettingsRow(
-                        icon = Icons.Default.Info,
+                        icon      = Icons.Default.Info,
                         iconColor = AccentBlue,
-                        title = "가이드",
-                        subtitle = "앱 사용 방법 안내",
+                        title     = "가이드",
+                        subtitle  = "앱 사용 방법 안내",
                         trailingContent = {
                             Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
                         },
@@ -99,128 +111,68 @@ fun SettingsScreen(
                 }
             }
 
-            // 앱 데이터 관리 섹션
-            SettingsSectionHeader(title = "앱 데이터 관리")
+            // 계정 섹션
+            SettingsSectionHeader(title = "계정")
 
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardBackground),
+                shape     = RoundedCornerShape(16.dp),
+                colors    = CardDefaults.cardColors(containerColor = CardBackground),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    SettingsRow(
-                        icon = Icons.Default.Refresh,
-                        iconColor = Primary,
-                        title = "데이터베이스 업데이트",
-                        subtitle = if (updateDone) "업데이트 완료" else "최신 임직원 정보로 업데이트",
-                        trailingContent = {
-                            if (isUpdating) {
-                                CircularProgressIndicator(color = Primary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
-                            }
-                        },
-                        onClick = { if (!isUpdating) showUpdateDialog = true }
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Background)
-                    SettingsRow(
-                        icon = Icons.Default.Delete,
-                        iconColor = AccentOrange,
-                        title = "데이터베이스 초기화",
-                        subtitle = "전화번호 정보 모두 삭제",
-                        trailingContent = {
-                            Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = TextSecondary)
-                        },
-                        onClick = { showResetDbDialog = true }
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Background)
-                    SettingsRow(
-                        icon = Icons.Default.Person,
-                        iconColor = Color.Red,
-                        title = "사용자정보 초기화",
-                        subtitle = "로그아웃됩니다",
-                        titleColor = Color.Red,
-                        trailingContent = {
+                SettingsRow(
+                    icon       = Icons.Default.ExitToApp,
+                    iconColor  = Color.Red,
+                    title      = "로그아웃",
+                    subtitle   = "현재 계정에서 로그아웃합니다",
+                    titleColor = Color.Red,
+                    trailingContent = {
+                        if (isLoggingOut) {
+                            CircularProgressIndicator(color = Color.Red, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
                             Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.Red.copy(alpha = 0.5f))
-                        },
-                        onClick = { showResetUserDialog = true }
-                    )
-                }
+                        }
+                    },
+                    onClick = { if (!isLoggingOut) showLogoutDialog = true }
+                )
             }
         }
     }
 
-    // Update confirmation dialog
-    if (showUpdateDialog) {
+    // 로그아웃 확인 다이얼로그
+    if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showUpdateDialog = false },
-            title = { Text("알림") },
-            text = { Text("전화번호부를 업데이트하시겠습니까?") },
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("로그아웃") },
+            text  = { Text("로그아웃 하시겠습니까?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showUpdateDialog = false
-                        isUpdating = true
+                        showLogoutDialog = false
+                        isLoggingOut = true
                         scope.launch {
-                            delay(2000)
-                            isUpdating = false
-                            updateDone = true
+                            try {
+                                // 서버에 로그아웃 API 호출 (ASIS 는 HTML 반환 → 응답 무시)
+                                AuthManager.authKey?.let { key ->
+                                    ApiClient.api.logout(
+                                        actnKey = ApiConstants.ACTN_LOGOUT,
+                                        authKey = key
+                                    ).close()  // ResponseBody 메모리 누수 방지
+                                }
+                            } catch (_: Exception) {
+                                // 네트워크 오류가 있어도 로컬 세션은 초기화
+                            } finally {
+                                AuthManager.clearSession()
+                                isLoggingOut = false
+                                onLogout()
+                            }
                         }
                     }
                 ) {
-                    Text("확인", color = Primary)
+                    Text("로그아웃", color = Color.Red)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUpdateDialog = false }) {
-                    Text("취소", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    // Reset DB confirmation dialog
-    if (showResetDbDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDbDialog = false },
-            title = { Text("알림") },
-            text = { Text("데이터베이스를 초기화하시겠습니까?\n전화번호 정보가 모두 삭제됩니다.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showResetDbDialog = false
-                        updateDone = false
-                    }
-                ) {
-                    Text("확인", color = Primary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDbDialog = false }) {
-                    Text("취소", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    // Reset user confirmation dialog
-    if (showResetUserDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetUserDialog = false },
-            title = { Text("알림") },
-            text = { Text("사용자 정보를 초기화하시겠습니까?\n로그아웃됩니다.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showResetUserDialog = false
-                        onLogout()
-                    }
-                ) {
-                    Text("확인", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetUserDialog = false }) {
+                TextButton(onClick = { showLogoutDialog = false }) {
                     Text("취소", color = TextSecondary)
                 }
             }

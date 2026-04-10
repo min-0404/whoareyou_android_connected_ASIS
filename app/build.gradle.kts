@@ -31,16 +31,18 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
+        // BuildConfig 생성 활성화: BuildConfig.DEBUG 등 빌드 상수를 코드에서 참조 가능
+        buildConfig = true
     }
 }
 
 kotlin {
-    jvmToolchain(11)
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -57,6 +59,18 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.6.0")
     // 확장 Material 아이콘 (CallReceived, CallMade, CallMissed 등)
     implementation("androidx.compose.material:material-icons-extended")
+
+    // ── 네트워크 레이어 ──────────────────────────────────────────────────────
+    // Retrofit2: HTTP API 클라이언트 (WhoAreYouApi 인터페이스 구현체 생성)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    // Gson Converter: ApiResponse<T> 등 Kotlin data class 자동 역직렬화
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // OkHttp3: Retrofit 기본 HTTP 클라이언트
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // OkHttp Logging Interceptor: 디버그 빌드에서 요청/응답 Logcat 출력
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    // Gson: JSON 파싱 라이브러리 (@SerializedName 어노테이션 지원)
+    implementation("com.google.code.gson:gson:2.10.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
