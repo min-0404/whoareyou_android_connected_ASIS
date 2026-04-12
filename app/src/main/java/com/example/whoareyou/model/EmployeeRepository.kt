@@ -305,13 +305,17 @@ object EmployeeRepository {
      * ASIS: POST search.wru (actnKey=toggleFav) → HTML 응답
      *       → [AsisSearchParser.parseToggleFavorite] 로 새 상태 추출
      *
-     * @param empNo 즐겨찾기를 토글할 직원의 사번
-     * @return 토글 후 새로운 즐겨찾기 상태 (true = 즐겨찾기 등록, false = 해제 또는 오류)
+     * 파싱 결과(null)로 상태를 알 수 없을 때는 [currentIsFavorite] 의 반전값을 반환합니다.
+     * (서버 API 호출 자체는 성공했으므로 상태가 반전되었다고 가정)
+     *
+     * @param empNo            즐겨찾기를 토글할 직원의 사번
+     * @param currentIsFavorite 토글 이전의 현재 즐겨찾기 상태
+     * @return 토글 후 새로운 즐겨찾기 상태 (오류 시 currentIsFavorite 유지)
      */
-    suspend fun toggleFavorite(empNo: String): Boolean {
+    suspend fun toggleFavorite(empNo: String, currentIsFavorite: Boolean): Boolean {
         val authKey = AuthManager.authKey ?: run {
             Log.w(TAG, "toggleFavorite() 호출 실패: authKey 없음")
-            return false
+            return currentIsFavorite   // 인증 없으면 현재 상태 유지
         }
         val phoneNo = AuthManager.loginPhoneNo ?: ""
 
@@ -324,16 +328,21 @@ object EmployeeRepository {
             )
             val html = body.eucKrString()
             Log.d(TAG, "toggleFavorite() HTML 수신 (${html.length}자): ${html.take(300)}")
-            AsisSearchParser.parseToggleFavorite(html, empNo)
+
+            // null = 파싱 불가 → 현재 상태의 반전값으로 폴백
+            AsisSearchParser.parseToggleFavorite(html, empNo) ?: run {
+                Log.d(TAG, "toggleFavorite() 파싱 실패 → 폴백: ${!currentIsFavorite}")
+                !currentIsFavorite
+            }
         } catch (e: IOException) {
             Log.e(TAG, "toggleFavorite() 네트워크 오류", e)
-            false
+            currentIsFavorite   // 오류 시 상태 유지
         } catch (e: HttpException) {
             Log.e(TAG, "toggleFavorite() HTTP 오류: ${e.code()}", e)
-            false
+            currentIsFavorite
         } catch (e: Exception) {
             Log.e(TAG, "toggleFavorite() 예상치 못한 오류", e)
-            false
+            currentIsFavorite
         }
     }
 

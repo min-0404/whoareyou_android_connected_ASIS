@@ -101,7 +101,7 @@ fun EmployeeDetailScreen(
                     .clickable(enabled = employee != null) {
                         employee?.let { emp ->
                             scope.launch {
-                                val newFav = EmployeeRepository.toggleFavorite(emp.empNo)
+                                val newFav = EmployeeRepository.toggleFavorite(emp.empNo, emp.isFavorite)
                                 employee   = emp.copy(isFavorite = newFav)
                             }
                         }
@@ -165,7 +165,7 @@ fun EmployeeDetailScreen(
                             modifier            = Modifier.fillMaxWidth().padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            ProfileAvatar(name = emp.name, size = 80)
+                            ProfileAvatar(name = emp.name, size = 80, imgdata = emp.imgdata)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(text = emp.name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))

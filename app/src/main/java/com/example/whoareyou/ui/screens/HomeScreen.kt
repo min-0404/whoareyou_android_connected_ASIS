@@ -1,5 +1,6 @@
 package com.example.whoareyou.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,18 +19,31 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import coil.request.ImageRequest
+import com.example.whoareyou.BuildConfig
 import com.example.whoareyou.R
 import com.example.whoareyou.model.Employee
+import com.example.whoareyou.model.EmployeeRepository
 import com.example.whoareyou.ui.theme.*
 
-// 트렌디한 신규 색상
-private val ColorTeal = Color(0xFF00B4D9)   // 전화번호 추가
+// ─── 메뉴 카드 색상 ──────────────────────────────────────────────────────────
+private val ColorTeal = Color(0xFF00B8D9)   // 전화번호 추가
 private val ColorRose = Color(0xFFE91E8C)   // 통화내역
+
+// ─── 카드 디자인 토큰 ─────────────────────────────────────────────────────────
+private val CardBorderColor  = Color(0xFFDDE1E9)   // 카드 테두리 (명확한 회색)
+private val CardBorderWidth  = 1.2.dp
+private val CardCornerRadius = 18.dp
+private val CardElevationDp  = 5.dp
 
 @Composable
 fun HomeScreen(
@@ -47,69 +61,93 @@ fun HomeScreen(
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    // 내 프로필 상태: 로그인 정보로 초기화 후 상세 API로 이미지 로드
+    var currentEmployee by remember { mutableStateOf(loggedInEmployee) }
+
+    // 내 프로필 이미지 비동기 로드
+    // 로그인 응답(AsisLoginParser)에는 이미지 정보가 없으므로 별도로 detail API 조회
+    LaunchedEffect(loggedInEmployee.empNo) {
+        val detail = EmployeeRepository.getDetail(loggedInEmployee.empNo)
+        if (detail != null) currentEmployee = detail
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Background)
     ) {
-        // 상단 헤더 (고정 높이)
-        Row(
+        // ── 상단 헤더 ──────────────────────────────────────────────────────────
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.top_logo),
-                contentDescription = "BC카드 로고",
+            Row(
                 modifier = Modifier
-                    .height(40.dp)
-                    .background(Color.White),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "후아유 임직원 서비스",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(
-                onClick = { showLogoutDialog = true },
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "로그아웃",
-                    tint = TextSecondary,
-                    modifier = Modifier.size(16.dp)
+                Image(
+                    painter = painterResource(id = R.drawable.top_logo),
+                    contentDescription = "BC카드 로고",
+                    modifier = Modifier.height(50.dp),
+                    contentScale = ContentScale.Fit
                 )
-                Spacer(modifier = Modifier.width(5.dp))
-                Text(text = "로그아웃", fontSize = 13.sp, color = TextSecondary)
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "후아유 임직원 서비스",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(
+                    onClick = { showLogoutDialog = true },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "로그아웃",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "로그아웃", fontSize = 12.sp, color = TextSecondary)
+                }
             }
+            // 헤더 하단 구분선
+            HorizontalDivider(color = Color(0xFFEEF0F4), thickness = 1.dp)
         }
 
-        // 콘텐츠 영역 (스크롤 가능)
+        // ── 콘텐츠 영역 (스크롤 가능) ─────────────────────────────────────────
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 32.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 내 프로필 카드 (고정 높이)
+            // 내 프로필 카드
             MyProfileCard(
-                employee = loggedInEmployee,
+                employee = currentEmployee,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { onNavigateToDetail(loggedInEmployee) }
+                onClick = { onNavigateToDetail(currentEmployee) }
             )
 
-            // 메뉴 카드 행 1 (고정 높이 → 하단 여백 자동 확보)
+            // ── 섹션 라벨 ──────────────────────────────────────────────────────
+            Text(
+                text = "바로가기",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextSecondary,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+
+            // 메뉴 카드 행 1
             Row(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier.fillMaxWidth().height(110.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 HomeMenuCard(
@@ -130,7 +168,7 @@ fun HomeScreen(
 
             // 메뉴 카드 행 2
             Row(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier.fillMaxWidth().height(110.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 HomeMenuCard(
@@ -151,7 +189,7 @@ fun HomeScreen(
 
             // 메뉴 카드 행 3
             Row(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier.fillMaxWidth().height(110.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 HomeMenuCard(
@@ -169,36 +207,41 @@ fun HomeScreen(
                     onClick = onNavigateToCallHistory
                 )
             }
-
         }
 
-        // 하단 탭바 (고정 높이)
-        Row(
+        // ── 하단 탭바 ─────────────────────────────────────────────────────────
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
                 .navigationBarsPadding()
-                .padding(vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            BottomTabItem(
-                icon = Icons.Default.Info,
-                label = "가이드",
-                isSelected = false,
-                onClick = onNavigateToInfo
-            )
-            BottomTabItem(
-                icon = Icons.Default.Home,
-                label = "홈",
-                isSelected = true,
-                onClick = {}
-            )
-            BottomTabItem(
-                icon = Icons.Default.Settings,
-                label = "설정",
-                isSelected = false,
-                onClick = onNavigateToSettings
-            )
+            HorizontalDivider(color = Color(0xFFEEF0F4), thickness = 1.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                BottomTabItem(
+                    icon = Icons.Default.Info,
+                    label = "가이드",
+                    isSelected = false,
+                    onClick = onNavigateToInfo
+                )
+                BottomTabItem(
+                    icon = Icons.Default.Home,
+                    label = "홈",
+                    isSelected = true,
+                    onClick = {}
+                )
+                BottomTabItem(
+                    icon = Icons.Default.Settings,
+                    label = "설정",
+                    isSelected = false,
+                    onClick = onNavigateToSettings
+                )
+            }
         }
     }
 
@@ -233,68 +276,97 @@ fun MyProfileCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier  = modifier.clickable { onClick() },
+        shape     = RoundedCornerShape(CardCornerRadius),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = CardElevationDp),
+        border    = BorderStroke(CardBorderWidth, CardBorderColor)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ProfileAvatar(size = 54, name = employee.name)
-            Spacer(modifier = Modifier.width(14.dp))
+            // 프로필 아바타 (테두리 링 추가)
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .background(Primary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                ProfileAvatar(
+                    name    = employee.name,
+                    size    = 56,
+                    imgdata = employee.imgdata
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
+                // 이름 + 닉네임
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = employee.name,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        text       = employee.name,
+                        fontSize   = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color      = TextPrimary
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = employee.nickname,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextSecondary
-                    )
+                    if (employee.nickname.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Primary.copy(alpha = 0.10f))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text       = employee.nickname,
+                                fontSize   = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color      = Primary
+                            )
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                // 팀 + 직책
                 Text(
-                    text = employee.team,
-                    fontSize = 13.sp,
+                    text       = if (employee.position.isNotBlank())
+                                     "${employee.team}  ·  ${employee.position}"
+                                 else employee.team,
+                    fontSize   = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextSecondary
+                    color      = Color(0xFF666677)
                 )
-                Spacer(modifier = Modifier.height(5.dp))
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BadgeBackground)
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Build,
-                        contentDescription = null,
-                        tint = Color(0xFF263DA0),
-                        modifier = Modifier.size(10.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = employee.jobTitle,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = BadgeText
-                    )
+                if (employee.jobTitle.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(7.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(BadgeBackground)
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = null,
+                            tint = BadgeText,
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text       = employee.jobTitle,
+                            fontSize   = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = BadgeText
+                        )
+                    }
                 }
             }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextSecondary.copy(alpha = 0.4f),
-                modifier = Modifier.size(18.dp)
+                tint     = Color(0xFFB0B8C8),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -309,37 +381,51 @@ fun HomeMenuCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier  = modifier.clickable { onClick() },
+        shape     = RoundedCornerShape(CardCornerRadius),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = CardElevationDp),
+        border    = BorderStroke(CardBorderWidth, CardBorderColor)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // 아이콘 박스: 더 크고 명확한 색상 배경
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(color.copy(alpha = 0.14f)),
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(15.dp))
+                    .background(color.copy(alpha = 0.13f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
-                )
+                // 아이콘 테두리 효과: 배경보다 살짝 진한 외곽선 박스
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(Color.Transparent),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = color,
+                        modifier = Modifier.size(27.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                textAlign = TextAlign.Center
+                text       = title,
+                fontSize   = 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color      = Color(0xFF1A1A2E),
+                textAlign  = TextAlign.Center,
+                lineHeight = 17.sp
             )
         }
     }
@@ -353,21 +439,25 @@ fun BottomTabItem(
     onClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier.clickable { onClick() },
+        modifier = Modifier
+            .clickable { onClick() }
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isSelected) Primary.copy(alpha = 0.09f) else Color.Transparent)
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (isSelected) Primary else TextSecondary,
-            modifier = Modifier.size(24.dp)
+            tint     = if (isSelected) Primary else Color(0xFFAAAAAA),
+            modifier = Modifier.size(22.dp)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Primary else TextSecondary
+            text       = label,
+            fontSize   = 10.sp,
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+            color      = if (isSelected) Primary else Color(0xFFAAAAAA)
         )
     }
 }
@@ -379,23 +469,96 @@ fun BottomTabItem(
 /**
  * 직원 프로필 아바타를 표시합니다.
  *
- * Base64 이미지 로딩 대신 이름의 첫 글자를 원형 배경 위에 표시합니다.
- * 모든 화면에서 일관된 아바타 스타일을 유지합니다.
+ * [imgdata] 가 제공된 경우 실제 프로필 사진을 보여줍니다.
+ * 지원 포맷:
+ *   - 상대 URL: /app/ubi/photo.wru?empNo=... → BASE_URL 을 앞에 붙여 절대 URL 로 변환
+ *   - 절대 URL: https://...
+ *   - data URI: data:image/jpeg;base64,... → Base64 디코딩 후 표시
+ *   - 순수 Base64 문자열 → 디코딩 시도
  *
- * @param name     직원 이름 (첫 글자를 아바타에 표시)
+ * 이미지 로드 실패 또는 [imgdata] 가 null 이면 이름 첫 글자 아바타로 폴백합니다.
+ * Coil 이미지 로더를 사용하며, Coil 은 MainActivity 에서 ApiClient.okHttpClient 로
+ * 초기화되어 동일한 SSL / 쿠키 설정을 공유합니다.
+ *
+ * @param name     직원 이름 (폴백 아바타에 표시)
  * @param size     아바타 크기 (dp)
+ * @param imgdata  프로필 이미지 데이터 (URL / data URI / Base64). null 이면 폴백.
  * @param modifier Modifier
  */
 @Composable
 fun ProfileAvatar(
     name: String,
     size: Int,
+    imgdata: String? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
+    // imgdata → Coil 이 처리할 수 있는 모델로 변환
+    // remember(imgdata) 로 캐싱하여 리컴포지션마다 재계산 방지
+    val imageModel: Any? = remember(imgdata) {
+        when {
+            imgdata.isNullOrBlank() -> null
+
+            // data URI: "data:image/jpeg;base64,/9j/..." → ByteArray
+            imgdata.startsWith("data:image") -> runCatching {
+                val base64Part = imgdata.substringAfter("base64,", "")
+                android.util.Base64.decode(base64Part, android.util.Base64.DEFAULT)
+                    .takeIf { it.isNotEmpty() }
+            }.getOrNull()
+
+            // 절대 URL
+            imgdata.startsWith("http://") || imgdata.startsWith("https://") -> imgdata
+
+            // 상대 URL: BASE_URL 을 앞에 붙여 절대 URL 로 변환
+            imgdata.startsWith("/") ->
+                "${BuildConfig.BASE_URL.trimEnd('/')}$imgdata"
+
+            // 순수 Base64 문자열 시도
+            else -> runCatching {
+                android.util.Base64.decode(imgdata, android.util.Base64.DEFAULT)
+                    .takeIf { it.isNotEmpty() }
+            }.getOrNull()
+        }
+    }
+
     Box(
         modifier = modifier
             .size(size.dp)
-            .clip(CircleShape)
+            .clip(CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageModel != null) {
+            // 이미지 로드 시도: 성공하면 실제 사진, 실패하면 문자 아바타로 폴백
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageModel)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = name,
+                modifier     = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            ) {
+                when (painter.state) {
+                    is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
+                    else -> ProfileLetterAvatar(name = name, size = size)
+                }
+            }
+        } else {
+            ProfileLetterAvatar(name = name, size = size)
+        }
+    }
+}
+
+/**
+ * 이름 첫 글자를 원형 배경에 표시하는 폴백 아바타.
+ * 이미지 없거나 로드 실패 시 사용됩니다.
+ */
+@Composable
+private fun ProfileLetterAvatar(name: String, size: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
             .background(PrimaryLight),
         contentAlignment = Alignment.Center
     ) {
@@ -408,7 +571,7 @@ fun ProfileAvatar(
     }
 }
 
-// PhotoUrl 파라미터를 받는 레거시 시그니처 (하위 호환용 - 이름으로 위임)
+// PhotoUrl 파라미터를 받는 레거시 시그니처 (하위 호환용)
 @Composable
 fun ProfileAvatar(
     size: Int,
@@ -416,5 +579,5 @@ fun ProfileAvatar(
     name: String = "?",
     modifier: Modifier = Modifier
 ) {
-    ProfileAvatar(name = name, size = size, modifier = modifier)
+    ProfileAvatar(name = name, size = size, imgdata = photoUrl, modifier = modifier)
 }

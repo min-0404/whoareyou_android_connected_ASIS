@@ -1,23 +1,21 @@
 package com.example.whoareyou.network
 
+import com.example.whoareyou.BuildConfig
+
 /**
  * 네트워크 레이어 전반에서 사용하는 상수 모음
  *
- * ⚠️ 서버 마이그레이션 안내:
- *   현재 ASIS 개발서버는 `/app/ubi/member.wru` (로그인)가 HTML을 반환합니다.
- *   `/app/ubi/search.wru` 및 `/app/ubi/SearchActn.who` 는 JSON을 반환합니다.
- *   로그인 API 정상화는 신규 Spring Boot 서버 배포 후 BASE_URL 교체만으로 완료됩니다.
+ * BASE_URL 은 빌드 플레이버에 따라 자동 결정됩니다:
+ *   dev  → https://isrnd.bccard.com:64443/  (개발서버, Trust-All SSL)
+ *   prod → https://u2.bccard.com/           (운영서버, 정식 SSL)
  */
 object ApiConstants {
 
     /**
-     * ASIS 개발서버 URL.
-     * 신규 Spring Boot 서버 배포 후 교체 필요.
-     *
-     * 주의: 해당 서버는 자체 서명(Self-Signed) 인증서를 사용하므로
-     *       ApiClient 에서 SSL 신뢰 처리가 별도로 필요합니다.
+     * 현재 빌드 플레이버의 서버 URL.
+     * build.gradle.kts 의 buildConfigField 로 주입됩니다.
      */
-    const val BASE_URL = "https://isrnd.bccard.com:64443/"
+    val BASE_URL: String get() = BuildConfig.BASE_URL
 
     // ─────────────────────────────────────────────────────────────────────
     // 엔드포인트 경로 (BASE_URL 기준 상대 경로)

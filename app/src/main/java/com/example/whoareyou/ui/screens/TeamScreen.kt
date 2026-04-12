@@ -139,7 +139,7 @@ fun TeamScreen(
                                 employee         = employee.copy(isFavorite = isFav),
                                 onToggleFavorite = {
                                     scope.launch {
-                                        val newFav = EmployeeRepository.toggleFavorite(employee.empNo)
+                                        val newFav = EmployeeRepository.toggleFavorite(employee.empNo, isFav)
                                         isFav = newFav
                                     }
                                 },
@@ -194,7 +194,7 @@ fun TeamMemberRow(
         Column(modifier = Modifier.padding(14.dp)) {
             // 프로필 행
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProfileAvatar(name = employee.name, size = 46)
+                ProfileAvatar(name = employee.name, size = 46, imgdata = employee.imgdata)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     // 이름 + 직책 뱃지

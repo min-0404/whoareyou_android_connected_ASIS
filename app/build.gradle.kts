@@ -21,6 +21,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "env"
+
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "BASE_URL", "\"https://isrnd.bccard.com:64443/\"")
+            buildConfigField("Boolean", "TRUST_ALL_SSL", "true")
+        }
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "BASE_URL", "\"https://u2.bccard.com/\"")
+            buildConfigField("Boolean", "TRUST_ALL_SSL", "false")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

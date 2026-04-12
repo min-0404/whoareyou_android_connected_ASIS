@@ -122,10 +122,10 @@ fun FavoritesScreen(
                         FavoriteEmployeeRow(
                             employee         = employee,
                             onToggleFavorite = {
-                                // 즐겨찾기 토글: API 호출 후 목록 새로고침
+                                // 즐겨찾기 해제: 목록에 있는 항목은 항상 isFavorite=true
                                 scope.launch {
-                                    EmployeeRepository.toggleFavorite(employee.empNo)
-                                    // 토글 후 목록 다시 로드
+                                    EmployeeRepository.toggleFavorite(employee.empNo, currentIsFavorite = true)
+                                    // 토글(해제) 후 목록 다시 로드
                                     favorites = EmployeeRepository.getMyFavorites()
                                 }
                             },
@@ -171,8 +171,8 @@ fun FavoriteEmployeeRow(
         Column(modifier = Modifier.padding(14.dp)) {
             // 프로필 행
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 아바타: 이름 첫 글자
-                ProfileAvatar(name = employee.name, size = 46)
+                // 아바타: 이미지 있으면 실제 사진, 없으면 이름 첫 글자
+                ProfileAvatar(name = employee.name, size = 46, imgdata = employee.imgdata)
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     // 이름 + 직책 뱃지

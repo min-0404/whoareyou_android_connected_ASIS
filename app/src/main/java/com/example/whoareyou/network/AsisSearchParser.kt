@@ -42,6 +42,51 @@ object AsisSearchParser {
     private const val TAG = "AsisSearchParser"
 
     // ─────────────────────────────────────────────────────────────────────────
+    // 내부 헬퍼: HTML 에서 프로필 이미지 URL 추출
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * HTML 에서 프로필 이미지 URL(또는 data URI)을 추출합니다.
+     *
+     * ASIS 서버가 반환하는 이미지는 보통 다음 경로 중 하나입니다:
+     *   - 상대 URL: /app/ubi/photo.wru?empNo=12345&authKey=...
+     *   - 상대 URL: /ubi/upload/empPhoto/12345.jpg
+     *   - data URI:  data:image/jpeg;base64,...
+     *
+     * 추출 우선순위:
+     *   1. class="profile-userpic" 컨테이너 내부 img.src
+     *   2. class="testimonials-photo" 컨테이너 내부 img.src (carousel)
+     *   3. photo 키워드를 포함하는 img.src
+     *   4. data:image/ 로 시작하는 인라인 Base64 img.src
+     *
+     * @param html 파싱 대상 HTML 문자열
+     * @return 추출된 이미지 URL(상대/절대/data URI) 또는 null
+     */
+    private fun extractProfileImageUrl(html: String): String? {
+        // 패턴 1: profile-userpic div 내 img src (상세 페이지 프로필 영역)
+        Regex("""class="profile-userpic"[\s\S]*?<img[^>]+src="([^"]+)"""")
+            .find(html)?.groupValues?.get(1)?.trim()
+            ?.takeIf { it.isNotBlank() }?.let { return it }
+
+        // 패턴 2: testimonials-photo div 내 img src (carousel 목록 썸네일)
+        Regex("""class="testimonials-photo"[\s\S]*?<img[^>]+src="([^"]+)"""")
+            .find(html)?.groupValues?.get(1)?.trim()
+            ?.takeIf { it.isNotBlank() }?.let { return it }
+
+        // 패턴 3: "photo" 키워드를 포함하는 img src (photo.wru / empPhoto 등)
+        Regex("""<img[^>]+src="(/[^"]*photo[^"]*)"[^>]*/?>""", RegexOption.IGNORE_CASE)
+            .find(html)?.groupValues?.get(1)?.trim()
+            ?.takeIf { it.isNotBlank() }?.let { return it }
+
+        // 패턴 4: data:image/ 인라인 Base64 (ASIS 일부 버전)
+        Regex("""<img[^>]+src="(data:image/[^"]+)"[^>]*/?>""")
+            .find(html)?.groupValues?.get(1)?.trim()
+            ?.takeIf { it.isNotBlank() }?.let { return it }
+
+        return null
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // 내부 헬퍼: 직원 HTML 블록 → Employee
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -97,6 +142,10 @@ object AsisSearchParser {
         val internalPhone = phones.getOrNull(0) ?: ""
         val mobilePhone   = phones.getOrNull(1) ?: ""
 
+        // ── 프로필 이미지 ─────────────────────────────────────────────────────
+        // carousel-info / accordion-inner 블록에 img 태그가 포함된 경우 URL 추출
+        val imgSrc = extractProfileImageUrl(block)
+
         return Employee(
             empNo         = empNo,
             name          = name,
@@ -109,7 +158,7 @@ object AsisSearchParser {
             mobilePhone   = mobilePhone,
             fax           = "",
             email         = "",
-            imgdata       = null,
+            imgdata       = imgSrc,
             isFavorite    = false
         )
     }
@@ -181,7 +230,10 @@ object AsisSearchParser {
             val isFav       = Regex("""id="isFav"\s+value="(true|false)"""").find(html)?.groupValues?.get(1) == "true"
             val finalEmpNo  = Regex("""toggleFav\('(\d+)'\)""").find(html)?.groupValues?.get(1) ?: empNo
 
-            Log.d(TAG, "parseDetail 성공: empNo=$finalEmpNo, name=$name, team=$team, position=$position")
+            // 프로필 이미지 URL 추출
+            val imgSrc = extractProfileImageUrl(html)
+
+            Log.d(TAG, "parseDetail 성공: empNo=$finalEmpNo, name=$name, team=$team, position=$position, hasImg=${imgSrc != null}")
 
             Employee(
                 empNo         = finalEmpNo,
@@ -195,7 +247,7 @@ object AsisSearchParser {
                 mobilePhone   = mobilePhone,
                 fax           = fax,
                 email         = email,
-                imgdata       = null,
+                imgdata       = imgSrc,
                 isFavorite    = isFav
             )
         } catch (e: Exception) {
@@ -219,7 +271,9 @@ object AsisSearchParser {
     // ─────────────────────────────────────────────────────────────────────────
 
     fun parseFavoriteList(html: String): List<Employee> {
+        // myFav 목록에 있는 직원은 모두 즐겨찾기 상태이므로 isFavorite = true 로 세팅
         return parseCarouselList(html, "parseFavoriteList")
+            .map { it.copy(isFavorite = true) }
     }
 
     /**
@@ -276,17 +330,40 @@ object AsisSearchParser {
     /**
      * toggleFav HTML 응답에서 토글 후 새로운 즐겨찾기 상태를 추출합니다.
      *
-     * ASIS detail 페이지와 동일하게 `id="isFav" value="..."` 패턴으로 확인합니다.
+     * ASIS 서버 응답 형식은 버전에 따라 다를 수 있으므로 여러 패턴을 순서대로 시도합니다:
+     *   1. `id="isFav" value="true|false"` — detail 페이지 내장 형식
+     *   2. JSON `"isFav":"Y"|"N"` — JSON embedded in HTML
+     *   3. 단순 Y/N/true/false 응답
+     *
+     * 모든 패턴 실패 시 null 을 반환합니다.
+     * 호출자(EmployeeRepository)에서 null 일 때 현재 상태를 반전하여 사용합니다.
+     *
+     * @return 파싱된 즐겨찾기 상태 (null = 파싱 불가)
      */
-    fun parseToggleFavorite(html: String, empNo: String): Boolean {
-        val favFromHtml = Regex("""id="isFav"\s+value="(true|false)"""")
-            .find(html)?.groupValues?.get(1)
-        if (favFromHtml != null) {
-            Log.d(TAG, "parseToggleFavorite 성공: empNo=$empNo, isFav=$favFromHtml")
-            return favFromHtml == "true"
+    fun parseToggleFavorite(html: String, empNo: String): Boolean? {
+        // 패턴 1: id="isFav" value="true|false"
+        Regex("""id="isFav"\s+value="(true|false)"""")
+            .find(html)?.groupValues?.get(1)?.let { v ->
+                Log.d(TAG, "parseToggleFavorite 패턴1 성공: empNo=$empNo, isFav=$v")
+                return v == "true"
+            }
+
+        // 패턴 2: JSON {"isFav":"Y"} 또는 {"isFav":"N"}
+        Regex(""""isFav"\s*:\s*"([YN])"""", RegexOption.IGNORE_CASE)
+            .find(html)?.groupValues?.get(1)?.let { v ->
+                Log.d(TAG, "parseToggleFavorite 패턴2 성공: empNo=$empNo, isFav=$v")
+                return v.equals("Y", ignoreCase = true)
+            }
+
+        // 패턴 3: 단순 문자열 응답 (Y / N / true / false / 1 / 0)
+        val trimmed = html.trim()
+        when (trimmed.lowercase()) {
+            "y", "true",  "1" -> { Log.d(TAG, "parseToggleFavorite 패턴3 성공: empNo=$empNo, Y"); return true  }
+            "n", "false", "0" -> { Log.d(TAG, "parseToggleFavorite 패턴3 성공: empNo=$empNo, N"); return false }
         }
-        Log.w(TAG, "parseToggleFavorite: isFav 파싱 실패 (empNo=$empNo)\n${html.take(300)}")
-        return false
+
+        Log.w(TAG, "parseToggleFavorite: 모든 패턴 실패 (empNo=$empNo) → 호출자가 반전값 사용\n${html.take(300)}")
+        return null  // 파싱 불가 → EmployeeRepository 에서 현재 상태 반전으로 폴백
     }
 
     // ─────────────────────────────────────────────────────────────────────────

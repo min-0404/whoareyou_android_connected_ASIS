@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import coil.Coil
+import coil.ImageLoader
 import com.example.whoareyou.navigation.AppNavigation
+import com.example.whoareyou.network.ApiClient
 import com.example.whoareyou.network.AuthManager
 import com.example.whoareyou.ui.theme.WhoAreYouTheme
 
@@ -38,6 +41,15 @@ class MainActivity : ComponentActivity() {
         // AuthManager 초기화: SharedPreferences 에서 저장된 세션(authKey, loginEmpNo 등)을 로드한다.
         // setContent() 보다 먼저 호출해야 Composable 에서 로그인 상태를 올바르게 읽을 수 있다.
         AuthManager.init(this)
+
+        // Coil 전역 이미지 로더 설정:
+        // ApiClient.okHttpClient 를 재사용하여 Retrofit 과 동일한 SSL(Trust-All dev) + 쿠키(JSESSIONID) 설정을 공유합니다.
+        // 이렇게 해야 ASIS 서버의 인증이 필요한 프로필 이미지 URL도 정상적으로 로드됩니다.
+        Coil.setImageLoader(
+            ImageLoader.Builder(this)
+                .okHttpClient { ApiClient.okHttpClient }
+                .build()
+        )
 
         // 오버레이 권한이 없으면 최초 1회 요청
         if (!Settings.canDrawOverlays(this)) {

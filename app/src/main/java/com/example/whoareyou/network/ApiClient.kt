@@ -1,6 +1,7 @@
 package com.example.whoareyou.network
 
 import android.util.Log
+import com.example.whoareyou.BuildConfig
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -128,13 +129,8 @@ object ApiClient {
         HttpLoggingInterceptor { message ->
             Log.d(TAG, message)
         }.apply {
-            // ⚠️ DEBUG 빌드 여부를 런타임에 확인합니다.
-            // BuildConfig 를 직접 참조하려면 build.gradle 에서 buildConfigField 설정이 필요합니다.
-            // 여기서는 간단히 BODY 레벨을 항상 적용합니다.
-            // 운영 빌드에서는 NONE 으로 교체하거나 BuildConfig.DEBUG 조건을 추가하세요:
-            //   level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
-            //           else HttpLoggingInterceptor.Level.NONE
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
         }
     }
 
@@ -148,7 +144,8 @@ object ApiClient {
      * - Trust-All SSL: 개발 서버 자체 서명 인증서 대응
      * - 로깅 인터셉터: 디버그 환경에서 요청/응답 전체 출력
      */
-    private val okHttpClient: OkHttpClient by lazy {
+    /** Coil 이미지 로더 등 앱 내부에서 동일한 SSL/쿠키 설정을 재사용하기 위해 internal 공개 */
+    internal val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
             .connectTimeout(ApiConstants.TIMEOUT_CONNECT_SEC, TimeUnit.SECONDS)
             .readTimeout(ApiConstants.TIMEOUT_READ_SEC, TimeUnit.SECONDS)
@@ -156,22 +153,22 @@ object ApiClient {
             .cookieJar(cookieJar)
             .addInterceptor(loggingInterceptor)
 
-        // Trust-All SSL 적용 (개발 서버 자체 서명 인증서 대응)
-        // 실패 시 기본 SSL로 폴백하여 앱 크래시를 방지합니다.
-        try {
-            val sslPair = createTrustAllSslSocketFactory()
-            if (sslPair != null) {
-                builder
-                    .sslSocketFactory(sslPair.first, sslPair.second)
-                    // Trust-All 설정 시 hostname 검증도 우회해야 합니다.
-                    // ⚠️ 이 설정도 운영 환경에서는 반드시 제거해야 합니다.
-                    .hostnameVerifier { _, _ -> true }
-                Log.d(TAG, "Trust-All SSL 설정 완료 (개발 전용)")
-            } else {
-                Log.d(TAG, "기본 SSL 설정 사용")
+        // Trust-All SSL: dev 플레이버에서만 적용 (개발서버 자체 서명 인증서 대응)
+        // prod 플레이버에서는 기본 SSL 검증을 사용합니다.
+        if (BuildConfig.TRUST_ALL_SSL) {
+            try {
+                val sslPair = createTrustAllSslSocketFactory()
+                if (sslPair != null) {
+                    builder
+                        .sslSocketFactory(sslPair.first, sslPair.second)
+                        .hostnameVerifier { _, _ -> true }
+                    Log.d(TAG, "Trust-All SSL 설정 완료 (dev 전용)")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "OkHttpClient SSL 설정 오류: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "OkHttpClient SSL 설정 오류: ${e.message}")
+        } else {
+            Log.d(TAG, "기본 SSL 검증 사용 (prod)")
         }
 
         builder.build()
