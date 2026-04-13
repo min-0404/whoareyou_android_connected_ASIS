@@ -1,8 +1,8 @@
 package com.example.whoareyou.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -39,11 +40,13 @@ import com.example.whoareyou.ui.theme.*
 private val ColorTeal = Color(0xFF00B8D9)   // 전화번호 추가
 private val ColorRose = Color(0xFFE91E8C)   // 통화내역
 
-// ─── 카드 디자인 토큰 ─────────────────────────────────────────────────────────
-private val CardBorderColor  = Color(0xFFDDE1E9)   // 카드 테두리 (명확한 회색)
-private val CardBorderWidth  = 1.2.dp
-private val CardCornerRadius = 18.dp
-private val CardElevationDp  = 5.dp
+// ─── Glass Card 디자인 토큰 ──────────────────────────────────────────────────
+// 흰색 배경 위에서 유리 카드가 보이도록 카드 배경은 연쿨그레이
+private val GlassCardShape   = RoundedCornerShape(20.dp)
+private val GlassCardBg      = Color(0xFFECEFF6)   // 연쿨그레이 카드 배경
+private val GlassShadowAmb   = Color(0xFF8090B8)   // 앰비언트 그림자
+private val GlassShadowSpot  = Color(0xFF4A5A80)   // 스팟 그림자
+private val GlassHighlight   = Color.White          // 하이라이트 테두리
 
 @Composable
 fun HomeScreen(
@@ -54,8 +57,6 @@ fun HomeScreen(
     onNavigateToFavorites: () -> Unit,
     onNavigateToTeam: () -> Unit,
     onNavigateToOrgChart: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToInfo: () -> Unit,
     onNavigateToAddPhone: () -> Unit,
     onNavigateToCallHistory: () -> Unit
 ) {
@@ -74,9 +75,9 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(Color.White)
     ) {
-        // ── 상단 헤더 ──────────────────────────────────────────────────────────
+        // ── 상단 헤더 ──────────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,157 +91,62 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.top_logo),
+                    painter            = painterResource(id = R.drawable.top_logo),
                     contentDescription = "BC카드 로고",
-                    modifier = Modifier.height(50.dp),
-                    contentScale = ContentScale.Fit
+                    modifier           = Modifier.height(50.dp),
+                    contentScale       = ContentScale.Fit
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "후아유 임직원 서비스",
-                    fontSize = 15.sp,
+                    text       = "후아유 임직원 서비스",
+                    fontSize   = 15.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary
+                    color      = TextPrimary
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(
-                    onClick = { showLogoutDialog = true },
+                    onClick        = { showLogoutDialog = true },
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = "로그아웃",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(15.dp)
-                    )
+                    Icon(Icons.Default.ExitToApp, "로그아웃", tint = TextSecondary, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "로그아웃", fontSize = 12.sp, color = TextSecondary)
+                    Text("로그아웃", fontSize = 12.sp, color = TextSecondary)
                 }
             }
-            // 헤더 하단 구분선
             HorizontalDivider(color = Color(0xFFEEF0F4), thickness = 1.dp)
         }
 
-        // ── 콘텐츠 영역 (스크롤 가능) ─────────────────────────────────────────
+        // ── 콘텐츠 영역 ──────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 28.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 내 프로필 카드
             MyProfileCard(
                 employee = currentEmployee,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { onNavigateToDetail(currentEmployee) }
+                onClick  = { onNavigateToDetail(currentEmployee) }
             )
-
-            // ── 섹션 라벨 ──────────────────────────────────────────────────────
             Text(
-                text = "바로가기",
-                fontSize = 13.sp,
+                text       = "바로가기",
+                fontSize   = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextSecondary,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                color      = TextSecondary,
+                modifier   = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
-
-            // 메뉴 카드 행 1
-            Row(
-                modifier = Modifier.fillMaxWidth().height(110.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeMenuCard(
-                    icon = Icons.Default.Star,
-                    title = "즐겨찾기",
-                    color = AccentOrange,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToFavorites
-                )
-                HomeMenuCard(
-                    icon = Icons.Default.Person,
-                    title = "팀원보기",
-                    color = AccentBlue,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToTeam
-                )
+            Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeMenuCard(icon = Icons.Default.Star,   title = "즐겨찾기",     color = AccentOrange, modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToFavorites)
+                HomeMenuCard(icon = Icons.Default.Person, title = "팀원보기",     color = AccentBlue,   modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToTeam)
             }
-
-            // 메뉴 카드 행 2
-            Row(
-                modifier = Modifier.fillMaxWidth().height(110.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeMenuCard(
-                    icon = Icons.Default.Search,
-                    title = "검색",
-                    color = AccentGreen,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToSearch
-                )
-                HomeMenuCard(
-                    icon = Icons.Default.List,
-                    title = "조직도",
-                    color = AccentPurple,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToOrgChart
-                )
+            Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeMenuCard(icon = Icons.Default.Search, title = "검색",         color = AccentGreen,  modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToSearch)
+                HomeMenuCard(icon = Icons.Default.List,   title = "조직도",       color = AccentPurple, modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToOrgChart)
             }
-
-            // 메뉴 카드 행 3
-            Row(
-                modifier = Modifier.fillMaxWidth().height(110.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeMenuCard(
-                    icon = Icons.Default.Add,
-                    title = "전화번호 추가",
-                    color = ColorTeal,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToAddPhone
-                )
-                HomeMenuCard(
-                    icon = Icons.Default.Phone,
-                    title = "통화내역",
-                    color = ColorRose,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    onClick = onNavigateToCallHistory
-                )
-            }
-        }
-
-        // ── 하단 탭바 ─────────────────────────────────────────────────────────
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .navigationBarsPadding()
-        ) {
-            HorizontalDivider(color = Color(0xFFEEF0F4), thickness = 1.dp)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                BottomTabItem(
-                    icon = Icons.Default.Info,
-                    label = "가이드",
-                    isSelected = false,
-                    onClick = onNavigateToInfo
-                )
-                BottomTabItem(
-                    icon = Icons.Default.Home,
-                    label = "홈",
-                    isSelected = true,
-                    onClick = {}
-                )
-                BottomTabItem(
-                    icon = Icons.Default.Settings,
-                    label = "설정",
-                    isSelected = false,
-                    onClick = onNavigateToSettings
-                )
+            Row(modifier = Modifier.fillMaxWidth().height(110.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                HomeMenuCard(icon = Icons.Default.Add,   title = "전화번호 추가", color = ColorTeal,    modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToAddPhone)
+                HomeMenuCard(icon = Icons.Default.Phone, title = "통화내역",      color = ColorRose,    modifier = Modifier.weight(1f).fillMaxHeight(), onClick = onNavigateToCallHistory)
             }
         }
     }
@@ -275,18 +181,25 @@ fun MyProfileCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier  = modifier.clickable { onClick() },
-        shape     = RoundedCornerShape(CardCornerRadius),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = CardElevationDp),
-        border    = BorderStroke(CardBorderWidth, CardBorderColor)
+    // Glass Card: 그림자 → 흰색 하이라이트 테두리 → 클립 → 연쿨그레이 배경
+    Box(
+        modifier = modifier
+            .clickable { onClick() }
+            .shadow(
+                elevation    = 14.dp,
+                shape        = GlassCardShape,
+                ambientColor = GlassShadowAmb.copy(alpha = 0.45f),
+                spotColor    = GlassShadowSpot.copy(alpha = 0.38f)
+            )
+            .border(2.dp, GlassHighlight, GlassCardShape)
+            .clip(GlassCardShape)
+            .background(GlassCardBg)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 프로필 아바타 (테두리 링 추가)
+            // 프로필 아바타
             Box(
                 modifier = Modifier
                     .size(60.dp)
@@ -380,12 +293,19 @@ fun HomeMenuCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier  = modifier.clickable { onClick() },
-        shape     = RoundedCornerShape(CardCornerRadius),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = CardElevationDp),
-        border    = BorderStroke(CardBorderWidth, CardBorderColor)
+    // Glass Card: 그림자 → 흰색 하이라이트 테두리 → 클립 → 연쿨그레이 배경
+    Box(
+        modifier = modifier
+            .clickable { onClick() }
+            .shadow(
+                elevation    = 10.dp,
+                shape        = GlassCardShape,
+                ambientColor = GlassShadowAmb.copy(alpha = 0.42f),
+                spotColor    = GlassShadowSpot.copy(alpha = 0.35f)
+            )
+            .border(2.dp, GlassHighlight, GlassCardShape)
+            .clip(GlassCardShape)
+            .background(GlassCardBg)
     ) {
         Column(
             modifier = Modifier
@@ -394,29 +314,27 @@ fun HomeMenuCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 아이콘 박스: 더 크고 명확한 색상 배경
+            // 아이콘 배경 박스
             Box(
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(50.dp)
+                    .shadow(
+                        elevation    = 6.dp,
+                        shape        = RoundedCornerShape(15.dp),
+                        ambientColor = color.copy(alpha = 0.30f),
+                        spotColor    = color.copy(alpha = 0.22f)
+                    )
+                    .border(1.5.dp, Color.White.copy(alpha = 0.80f), RoundedCornerShape(15.dp))
                     .clip(RoundedCornerShape(15.dp))
-                    .background(color.copy(alpha = 0.13f)),
+                    .background(color.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
-                // 아이콘 테두리 효과: 배경보다 살짝 진한 외곽선 박스
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(Color.Transparent),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = color,
-                        modifier = Modifier.size(27.dp)
-                    )
-                }
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = title,
+                    tint               = color,
+                    modifier           = Modifier.size(26.dp)
+                )
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
@@ -428,37 +346,6 @@ fun HomeMenuCard(
                 lineHeight = 17.sp
             )
         }
-    }
-}
-
-@Composable
-fun BottomTabItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .clickable { onClick() }
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) Primary.copy(alpha = 0.09f) else Color.Transparent)
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint     = if (isSelected) Primary else Color(0xFFAAAAAA),
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text       = label,
-            fontSize   = 10.sp,
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-            color      = if (isSelected) Primary else Color(0xFFAAAAAA)
-        )
     }
 }
 

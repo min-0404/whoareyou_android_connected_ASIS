@@ -79,6 +79,34 @@ interface WhoAreYouApi {
     ): ApiResponse<LoginDataDto>
 
     // =========================================================================
+    // ① -b 비밀번호 초기화 (MOTP 인증)
+    // POST /app/ubi/member.wru
+    // =========================================================================
+
+    /**
+     * MOTP 값을 이용한 비밀번호 초기화
+     *
+     * ASIS 서버에 사번 + 신규 비밀번호 + MOTP 값을 전송하여 비밀번호를 변경합니다.
+     * 성공 시 webkit.messageHandlers 브릿지 패턴으로 결과 HTML 을 반환합니다.
+     *
+     * @param actnKey  항상 "chgPwd" (ApiConstants.ACTN_CHANGE_PWD)
+     * @param empNo    직원 사번
+     * @param newPwd   변경할 신규 비밀번호
+     * @param motp     모바일 OTP 값 (MOTP 앱에서 생성)
+     * @param isApp    항상 "Y"
+     */
+    @FormUrlEncoded
+    @POST(ApiConstants.ENDPOINT_MEMBER)
+    suspend fun changePassword(
+        @Field("actnKey") actnKey: String = ApiConstants.ACTN_CHANGE_PWD,
+        @Field("empNo")   empNo:   String,
+        @Field("passwd")  newPwd:  String,
+        @Field("motp")    motp:    String,
+        @Field("isApp")   isApp:   String = "Y",
+        @Field("version") version: String = "14"
+    ): ResponseBody  // ASIS 는 HTML 반환 → AsisLoginParser.parsePasswordReset() 로 파싱
+
+    // =========================================================================
     // ② 로그아웃
     // POST /app/ubi/member.wru
     // =========================================================================

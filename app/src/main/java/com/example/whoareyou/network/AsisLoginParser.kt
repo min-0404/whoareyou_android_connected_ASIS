@@ -163,4 +163,67 @@ object AsisLoginParser {
         html.contains("WRU_0010")        -> "자동로그인 정보가 초기화되었습니다.\n다시 로그인해주세요."
         else                             -> "로그인에 실패했습니다.\n입력 정보를 확인해주세요."
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 비밀번호 초기화 응답 파싱
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ASIS 비밀번호 초기화(chgPwd) HTML 응답에서 성공/실패 여부를 판단합니다.
+     *
+     * 성공 패턴 (webkit.messageHandlers 포함 OR 서버 성공 메시지):
+     *   - webkit.messageHandlers.jsonData.postMessage(...)
+     *   - "success" / "비밀번호가 변경" / "완료"
+     *
+     * 실패 패턴:
+     *   - form-group div 안의 에러 메시지
+     *   - MOTP 오류, 사번 불일치 등
+     *
+     * @param html ASIS 서버 응답 HTML
+     * @return 성공 시 null, 실패 시 사용자 친화적 에러 메시지 문자열
+     */
+    fun parsePasswordReset(html: String): String? {
+        Log.d(TAG, "parsePasswordReset: html=${html.take(400)}")
+
+        // 성공 판정: webkit 브릿지 메시지 또는 서버 성공 키워드
+        val isSuccess = html.contains(SUCCESS_MARKER)
+            || html.contains("비밀번호가 변경")
+            || html.contains("변경되었습니다")
+            || html.contains("변경 완료")
+            || html.contains("\"result\":\"success\"", ignoreCase = true)
+            || html.contains("\"result\":\"ok\"",      ignoreCase = true)
+
+        if (isSuccess) {
+            Log.d(TAG, "parsePasswordReset: 성공")
+            return null  // null = 성공
+        }
+
+        // 실패: form-group 에서 에러 메시지 추출
+        return try {
+            val divRegex = Regex("""<div class="form-group">([\s\S]*?)</div>""")
+            val matches  = divRegex.findAll(html).toList()
+            val rawMsg   = matches.getOrNull(1)?.groupValues?.get(1)
+                ?: matches.getOrNull(0)?.groupValues?.get(1)
+
+            val extracted = rawMsg
+                ?.replace(Regex("<br\\s*/?>"), "\n")
+                ?.replace(Regex("<[^>]+>"), "")
+                ?.trim()
+                .orEmpty()
+
+            extracted.ifBlank { resolvePwdResetError(html) }
+        } catch (e: Exception) {
+            Log.e(TAG, "parsePasswordReset 파싱 오류", e)
+            resolvePwdResetError(html)
+        }
+    }
+
+    /** 비밀번호 초기화 실패 시 에러 메시지 매핑 */
+    private fun resolvePwdResetError(html: String): String = when {
+        html.contains("motp", ignoreCase = true) ||
+        html.contains("OTP",  ignoreCase = true)  -> "MOTP 값이 올바르지 않습니다.\nMOTP 앱에서 생성된 값을 다시 확인해주세요."
+        html.contains("사번")                      -> "사번이 올바르지 않습니다."
+        html.contains("비밀번호")                   -> "비밀번호 형식이 올바르지 않습니다.\n(영문+숫자+특수문자 조합 8자 이상)"
+        else                                       -> "비밀번호 초기화에 실패했습니다.\n입력 정보를 다시 확인해주세요."
+    }
 }

@@ -35,9 +35,10 @@ object ApiConstants {
     // ─────────────────────────────────────────────────────────────────────
 
     // member.wru 액션 키
-    const val ACTN_LOGIN    = "login"
-    const val ACTN_LOGOUT   = "logout"
-    const val ACTN_MY_INFO  = "myinfo"
+    const val ACTN_LOGIN      = "login"
+    const val ACTN_LOGOUT     = "logout"
+    const val ACTN_MY_INFO    = "myinfo"
+    const val ACTN_CHANGE_PWD = "chgPwd"   // 비밀번호 초기화 (MOTP 인증)
 
     // search.wru 액션 키
     const val ACTN_SEARCH       = "search"
