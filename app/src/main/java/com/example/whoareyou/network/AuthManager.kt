@@ -160,6 +160,21 @@ object AuthManager {
             }.apply()
         }
 
+    /**
+     * 서버 세션 쿠키 (JSESSIONID).
+     *
+     * 앱 재시작 후에도 기존 서버 세션을 복원하기 위해 SharedPreferences에 저장합니다.
+     * prefs 가 null 이어도 예외를 던지지 않고 null 을 반환합니다 (CookieJar에서 안전하게 호출 가능).
+     */
+    var jsessionId: String?
+        get() = prefs?.getString(ApiConstants.PREF_JSESSIONID, null)
+        set(value) {
+            prefs?.edit()?.apply {
+                if (value != null) putString(ApiConstants.PREF_JSESSIONID, value)
+                else remove(ApiConstants.PREF_JSESSIONID)
+            }?.apply()
+        }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 세션 상태 확인
     // ─────────────────────────────────────────────────────────────────────────
@@ -235,6 +250,7 @@ object AuthManager {
             remove(ApiConstants.PREF_LOGIN_ORG_CD)
             remove(ApiConstants.PREF_LOGIN_EMP_NM)
             remove(ApiConstants.PREF_LOGIN_PHONE)
+            remove(ApiConstants.PREF_JSESSIONID)
         }.apply()
 
         Log.d(TAG, "세션 초기화 완료 (로그아웃)")

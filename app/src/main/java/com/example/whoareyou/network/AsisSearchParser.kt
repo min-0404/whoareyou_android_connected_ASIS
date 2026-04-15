@@ -3,6 +3,7 @@ package com.example.whoareyou.network
 import android.util.Log
 import com.example.whoareyou.model.Employee
 import com.example.whoareyou.network.dto.Dept
+import com.example.whoareyou.network.dto.OrgSection
 
 /**
  * ASIS search.wru HTML 응답 파서
@@ -417,6 +418,76 @@ object AsisSearchParser {
         }
 
         Log.d(TAG, "parseOrganization 완료: ${result.size}개 조직")
+        return result
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 조직도 섹션 파서 — actnKey=organizaion (서버 오타 그대로)
+    // accordion-group 단위로 섹션(CEO/감사/노동조합)을 추출합니다.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * organizaion HTML 응답에서 최상위 [OrgSection] 목록을 추출합니다.
+     *
+     * 각 accordion-group 은 하나의 섹션을 나타냅니다:
+     *  - 섹션명: accordion-toggle 텍스트
+     *  - 직접 부서 코드: accordion-toggle 에 goDeptList 가 있으면 추출 (예: 노동조합)
+     *  - 책임자 직원: accordion-inner 에 goEmpDetail 포함된 경우 파싱
+     *  - 하위 부서: accordion-inner 의 goDeptList 링크 목록
+     */
+    fun parseOrgSections(html: String): List<OrgSection> {
+        val result = mutableListOf<OrgSection>()
+
+        val groups = html.split("""<div class="accordion-group">""").drop(1)
+
+        for (groupHtml in groups) {
+            try {
+                // 섹션명: accordion-toggle 내부 텍스트
+                val groupName = Regex(
+                    """class="accordion-toggle"[^>]*>(.*?)</a>""",
+                    RegexOption.DOT_MATCHES_ALL
+                ).find(groupHtml)?.groupValues?.get(1)
+                    ?.replace(Regex("<[^>]+>"), "")?.trim()
+                if (groupName.isNullOrBlank()) continue
+
+                // accordion-toggle 에 직접 goDeptList 가 있는 경우 (예: 노동조합)
+                val directCode = Regex(
+                    """class="accordion-toggle"[^>]*onclick="[^"]*goDeptList\('([^']+)'\)"""
+                ).find(groupHtml)?.groupValues?.get(1)?.trim() ?: ""
+
+                // accordion-inner 내용 추출 (groupHtml 은 이미 한 accordion-group 범위)
+                val innerHtml = groupHtml.substringAfter("""class="accordion-inner">""", "")
+
+                // 책임자 직원 파싱 (goEmpDetail 포함된 경우)
+                val headEmployee = if (innerHtml.contains("goEmpDetail")) {
+                    try { parseEmpBlock(innerHtml) } catch (e: Exception) { null }
+                } else null
+
+                // 하위 부서 목록 파싱 (nav-list 의 goDeptList 링크)
+                val subDepts = mutableListOf<Dept>()
+                Regex(
+                    """onclick="[^"]*goDeptList\('([^']+)'\)[^"]*"[^>]*>(.*?)</a>""",
+                    RegexOption.DOT_MATCHES_ALL
+                ).findAll(innerHtml).forEach { m ->
+                    val code = m.groupValues[1].trim()
+                    val name = m.groupValues[2].replace(Regex("<[^>]+>"), "").trim()
+                    if (code.isNotBlank() && name.isNotBlank()) {
+                        subDepts.add(Dept(deptCode = code, deptName = name, level = 1))
+                    }
+                }
+
+                result.add(OrgSection(
+                    name         = groupName,
+                    deptCode     = directCode,
+                    headEmployee = headEmployee,
+                    subDepts     = subDepts
+                ))
+            } catch (e: Exception) {
+                Log.e(TAG, "parseOrgSections: 그룹 파싱 오류", e)
+            }
+        }
+
+        Log.d(TAG, "parseOrgSections 완료: ${result.size}개 섹션")
         return result
     }
 }

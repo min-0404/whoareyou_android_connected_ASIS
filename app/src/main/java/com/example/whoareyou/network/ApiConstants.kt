@@ -74,6 +74,7 @@ object ApiConstants {
     const val PREF_LOGIN_ORG_CD  = "login_org_cd"
     const val PREF_LOGIN_EMP_NM  = "login_emp_nm"
     const val PREF_LOGIN_PHONE   = "login_phone_no"  // ASIS API 호출 시 phoneNo 파라미터로 사용
+    const val PREF_JSESSIONID    = "jsessionid"       // 앱 재시작 후 세션 복원용
 
     // ─────────────────────────────────────────────────────────────────────
     // OkHttp 타임아웃 (초)

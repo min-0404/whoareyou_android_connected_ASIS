@@ -1,5 +1,6 @@
 package com.example.whoareyou.network.dto
 
+import com.example.whoareyou.model.Employee
 import com.google.gson.annotations.SerializedName
 
 /**
@@ -95,4 +96,23 @@ fun DeptDto.toDept(memberCount: Int = 0): Dept = Dept(
     deptName    = orgNm,
     level       = orgLevel,
     memberCount = memberCount
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OrgSection: 조직도 최상위 그룹 (예: CEO, 감사, 노동조합)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * organizaion API 응답의 accordion 섹션 하나를 표현합니다.
+ *
+ * @param name         그룹명 (e.g. "CEO", "감사", "노동조합")
+ * @param deptCode     그룹 자체의 부서 코드. accordion-toggle 에 goDeptList 가 직접 있는 경우에만 존재.
+ * @param headEmployee 해당 그룹의 책임자 직원 (없으면 null)
+ * @param subDepts     하위 부서 목록 (없으면 빈 리스트)
+ */
+data class OrgSection(
+    val name: String,
+    val deptCode: String = "",
+    val headEmployee: Employee? = null,
+    val subDepts: List<Dept> = emptyList()
 )

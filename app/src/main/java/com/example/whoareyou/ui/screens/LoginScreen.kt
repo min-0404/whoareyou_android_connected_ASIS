@@ -67,13 +67,13 @@ import java.nio.charset.Charset
 // 색상 상수
 // ─────────────────────────────────────────────────────────────────────────────
 private val BcRed        = Color(0xFFE53935)
-private val FieldBg      = Color(0xFFE8EBF2)   // 입력 필드 연쿨그레이
+private val FieldBg      = Color(0xFFEEEEF0)   // 입력 필드 중성 라이트그레이 (iOS26)
 private val FieldBorder  = Color.White           // 입력 필드 하이라이트 테두리
 
-// Glass 카드 토큰
-private val GlassCardBg    = Color(0xFFECEFF6)   // 연쿨그레이 카드 배경
-private val GlassShadowAmb = Color(0xFF8090B8)
-private val GlassShadowSpt = Color(0xFF4A5A80)
+// Glass 카드 토큰 (iOS 26 Liquid Glass 스타일: 중성 화이트, 블루 틴트 없음)
+private val GlassCardBg    = Color(0xFFF5F5F7)   // 거의 흰색에 가까운 중성 그레이
+private val GlassShadowAmb = Color(0xFFAAAAAA)   // 중성 그림자
+private val GlassShadowSpt = Color(0xFF888888)   // 중성 스팟 그림자
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LoginScreen
@@ -107,17 +107,15 @@ fun LoginScreen(onLoginSuccess: (Employee) -> Unit) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // ── 로고 ──────────────────────────────────────────────────────
             Image(
                 painter            = painterResource(id = R.drawable.login_logo),
                 contentDescription = "BC카드 로고",
-                modifier           = Modifier.size(200.dp),
+                modifier           = Modifier.size(150.dp),
                 contentScale       = ContentScale.Fit
             )
-
-            Spacer(modifier = Modifier.height(0.dp))
 
             // ── 앱 타이틀 ─────────────────────────────────────────────────
             val bcBrush = Brush.horizontalGradient(listOf(Color(0xFFE53935), Color(0xFFFF6B6B)))
@@ -238,10 +236,10 @@ private fun SlidingTabSelector(
     selectedIdx: Int,
     onTabSelect: (Int) -> Unit
 ) {
-    // 카드와 동일한 Glass 스타일 탭 바
-    val barBg     = Color(0xFFE2E5EF)   // 카드보다 살짝 어두운 연쿨그레이
+    // 카드와 동일한 Glass 스타일 탭 바 (iOS26: 중성 그레이)
+    val barBg     = Color(0xFFE8E8EA)   // 카드보다 살짝 어두운 중성 그레이
     val barBorder = Color.White
-    val pillColor = Color(0xFFF6F8FF)   // 선택된 탭 pill – 밝은 흰색에 가까운 색
+    val pillColor = Color(0xFFF5F5F7)   // 선택된 탭 pill – 카드와 동일한 밝은 흰색
 
     BoxWithConstraints(
         modifier = Modifier
@@ -482,6 +480,7 @@ private fun PasswordResetContent(
     onError:   (String, String) -> Unit
 ) {
     var empNo       by remember { mutableStateOf("") }
+    var phoneNo     by remember { mutableStateOf("") }
     var newPwd      by remember { mutableStateOf("") }
     var confirmPwd  by remember { mutableStateOf("") }
     var motpValue   by remember { mutableStateOf("") }
@@ -491,13 +490,18 @@ private fun PasswordResetContent(
 
     val scope = rememberCoroutineScope()
 
+    // 휴대폰번호 정규화: 하이픈·공백 제거 후 숫자만
+    fun normalizePhone(raw: String) = raw.replace(Regex("[^0-9]"), "")
+
     fun doReset() {
+        val normalizedPhone = normalizePhone(phoneNo)
         when {
-            empNo.isBlank()     -> { onError("알림", "사번을 입력해주세요."); return }
-            newPwd.isBlank()    -> { onError("알림", "새 비밀번호를 입력해주세요."); return }
-            newPwd.length < 8   -> { onError("알림", "비밀번호는 8자 이상 입력해주세요."); return }
-            newPwd != confirmPwd -> { onError("알림", "비밀번호가 일치하지 않습니다."); return }
-            motpValue.isBlank() -> { onError("알림", "MOTP 값을 입력해주세요."); return }
+            empNo.isBlank()            -> { onError("알림", "사번을 입력해주세요."); return }
+            normalizedPhone.length < 10 -> { onError("알림", "HRMS에 등록된 휴대폰번호를 입력해주세요."); return }
+            newPwd.isBlank()           -> { onError("알림", "새 비밀번호를 입력해주세요."); return }
+            newPwd.length < 8          -> { onError("알림", "비밀번호는 8자 이상 입력해주세요."); return }
+            newPwd != confirmPwd        -> { onError("알림", "비밀번호가 일치하지 않습니다."); return }
+            motpValue.isBlank()        -> { onError("알림", "MOTP 값을 입력해주세요."); return }
         }
         scope.launch {
             isLoading = true
@@ -505,6 +509,7 @@ private fun PasswordResetContent(
                 val responseBody = ApiClient.api.changePassword(
                     actnKey = ApiConstants.ACTN_CHANGE_PWD,
                     empNo   = empNo.trim(),
+                    phoneNo = normalizePhone(phoneNo),
                     newPwd  = newPwd,
                     motp    = motpValue.trim()
                 )
@@ -540,9 +545,9 @@ private fun PasswordResetContent(
             Icon(Icons.Default.Info, null, tint = BcRed, modifier = Modifier.size(15.dp).padding(top = 1.dp))
             Spacer(Modifier.width(7.dp))
             Text(
-                text     = "MOTP 앱에서 생성된 6~8자리 OTP 값을 입력하세요.\n비밀번호는 영문+숫자+특수문자 조합 8자 이상입니다.",
-                fontSize = 11.sp,
-                color    = BcRed.copy(alpha = 0.8f),
+                text       = "HRMS에 등록된 휴대폰번호와 MOTP 앱의 6~8자리 OTP 값을 입력하세요.\n비밀번호는 영문+숫자+특수문자 조합 8자 이상입니다.",
+                fontSize   = 11.sp,
+                color      = BcRed.copy(alpha = 0.8f),
                 lineHeight = 17.sp
             )
         }
@@ -554,6 +559,25 @@ private fun PasswordResetContent(
             value         = empNo,
             onValueChange = { empNo = it.filter { c -> c.isDigit() } },
             keyboardType  = KeyboardType.Number,
+            imeAction     = ImeAction.Next
+        )
+
+        // 휴대폰번호 (HRMS 등록 번호)
+        LoginField(
+            icon          = Icons.Default.Phone,
+            placeholder   = "휴대폰번호 (010-0000-0000)",
+            value         = phoneNo,
+            onValueChange = { input ->
+                // 숫자만 받고 최대 11자리로 제한
+                val digits = input.filter { c -> c.isDigit() }.take(11)
+                // 자동 하이픈 삽입: 010-XXXX-XXXX
+                phoneNo = when {
+                    digits.length <= 3  -> digits
+                    digits.length <= 7  -> "${digits.substring(0,3)}-${digits.substring(3)}"
+                    else                -> "${digits.substring(0,3)}-${digits.substring(3,7)}-${digits.substring(7)}"
+                }
+            },
+            keyboardType  = KeyboardType.Phone,
             imeAction     = ImeAction.Next
         )
 

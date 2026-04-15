@@ -1,6 +1,7 @@
 package com.example.whoareyou
 
 import android.Manifest
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -23,6 +24,12 @@ import com.example.whoareyou.network.AuthManager
 import com.example.whoareyou.ui.theme.WhoAreYouTheme
 
 class MainActivity : ComponentActivity() {
+
+    // CALL_SCREENING 역할 요청 런처 (Android 10+)
+    // 이 역할이 허용되어야 설정 > 기본앱 > 발신번호 표시 및 스팸 앱 목록에 앱이 나타납니다.
+    private val callScreeningRoleLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* 역할 허용/거부와 무관하게 앱 계속 실행 */ }
 
     // READ_PHONE_STATE 런타임 권한 요청 런처
     private val phoneStatePermissionLauncher = registerForActivityResult(
@@ -50,6 +57,17 @@ class MainActivity : ComponentActivity() {
                 .okHttpClient { ApiClient.okHttpClient }
                 .build()
         )
+
+        // CALL_SCREENING 역할 요청 (Android 10+)
+        // 허용 시 설정 > 기본앱 > 발신번호 표시 및 스팸 앱에 후아유가 표시됩니다.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = getSystemService(RoleManager::class.java)
+            if (roleManager != null && !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+                callScreeningRoleLauncher.launch(
+                    roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+                )
+            }
+        }
 
         // 오버레이 권한이 없으면 최초 1회 요청
         if (!Settings.canDrawOverlays(this)) {

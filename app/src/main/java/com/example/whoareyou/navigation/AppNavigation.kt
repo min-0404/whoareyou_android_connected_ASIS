@@ -96,6 +96,9 @@ fun AppNavigation() {
     // 내비바 선택 탭 인덱스 (라우트로부터 자동 결정)
     val selectedNavIdx = NAV_TABS.indexOfFirst { it.route == currentRoute }.takeIf { it >= 0 } ?: 1
 
+    // PersistentGlassNavBar 는 전체 화면 기준으로 위치해야 하므로
+    // Scaffold 바깥쪽 Box 안에 오버레이로 배치합니다.
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = Color.Transparent,
         // Scaffold의 bottomBar는 콘텐츠에 패딩만 부여하는 투명 Spacer
@@ -110,16 +113,11 @@ fun AppNavigation() {
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
             // ── NavHost (전체 화면 콘텐츠) ─────────────────────────────────
             NavHost(
                 navController    = navController,
                 startDestination = startDestination,
-                modifier         = Modifier.fillMaxSize()
+                modifier         = Modifier.fillMaxSize().padding(paddingValues)
             ) {
                 // 로그인
                 composable(Screen.Login.route) {
@@ -230,19 +228,19 @@ fun AppNavigation() {
                     CallHistoryScreen(onBack = { navController.popBackStack() })
                 }
             }
+    } // Scaffold end
 
-            // ── 플로팅 글래스 내비바 오버레이 ─────────────────────────────
-            if (showBottomBar) {
-                PersistentGlassNavBar(
-                    modifier     = Modifier.align(Alignment.BottomCenter),
-                    selectedIdx  = selectedNavIdx,
-                    onSelect     = { idx ->
-                        navigateMainTab(navController, NAV_TABS[idx].route)
-                    }
-                )
+    // ── 플로팅 글래스 내비바 오버레이 (전체 화면 기준 BottomCenter) ───────
+    if (showBottomBar) {
+        PersistentGlassNavBar(
+            modifier     = Modifier.align(Alignment.BottomCenter),
+            selectedIdx  = selectedNavIdx,
+            onSelect     = { idx ->
+                navigateMainTab(navController, NAV_TABS[idx].route)
             }
-        }
+        )
     }
+    } // outer Box end
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

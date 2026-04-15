@@ -40,13 +40,12 @@ import com.example.whoareyou.ui.theme.*
 private val ColorTeal = Color(0xFF00B8D9)   // 전화번호 추가
 private val ColorRose = Color(0xFFE91E8C)   // 통화내역
 
-// ─── Glass Card 디자인 토큰 ──────────────────────────────────────────────────
-// 흰색 배경 위에서 유리 카드가 보이도록 카드 배경은 연쿨그레이
+// ─── Glass Card 디자인 토큰 (iOS 26 Liquid Glass 스타일) ────────────────────
 private val GlassCardShape   = RoundedCornerShape(20.dp)
-private val GlassCardBg      = Color(0xFFECEFF6)   // 연쿨그레이 카드 배경
-private val GlassShadowAmb   = Color(0xFF8090B8)   // 앰비언트 그림자
-private val GlassShadowSpot  = Color(0xFF4A5A80)   // 스팟 그림자
-private val GlassHighlight   = Color.White          // 하이라이트 테두리
+private val GlassCardBg      = Color(0xFFF5F5F7)   // 거의 흰색, 중성 그레이 (블루 틴트 없음)
+private val GlassShadowAmb   = Color(0xFFAAAAAA)   // 중성 앰비언트 그림자
+private val GlassShadowSpot  = Color(0xFF888888)   // 중성 스팟 그림자
+private val GlassHighlight   = Color(0xFFE8E8E8)    // 카드 테두리 (옅은 회색)
 
 @Composable
 fun HomeScreen(

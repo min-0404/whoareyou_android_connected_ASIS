@@ -86,11 +86,12 @@ interface WhoAreYouApi {
     /**
      * MOTP 값을 이용한 비밀번호 초기화
      *
-     * ASIS 서버에 사번 + 신규 비밀번호 + MOTP 값을 전송하여 비밀번호를 변경합니다.
-     * 성공 시 webkit.messageHandlers 브릿지 패턴으로 결과 HTML 을 반환합니다.
+     * ASIS 서버에 사번 + HRMS 휴대폰번호 + 신규 비밀번호 + MOTP 값을 전송하여 비밀번호를 변경합니다.
+     * phoneNo 는 HRMS에 등록된 휴대폰번호로 사용자 신원 확인에 사용됩니다 (하이픈 없이).
      *
      * @param actnKey  항상 "chgPwd" (ApiConstants.ACTN_CHANGE_PWD)
      * @param empNo    직원 사번
+     * @param phoneNo  HRMS 등록 휴대폰번호 (하이픈 없이, 예: 01012345678)
      * @param newPwd   변경할 신규 비밀번호
      * @param motp     모바일 OTP 값 (MOTP 앱에서 생성)
      * @param isApp    항상 "Y"
@@ -100,10 +101,10 @@ interface WhoAreYouApi {
     suspend fun changePassword(
         @Field("actnKey") actnKey: String = ApiConstants.ACTN_CHANGE_PWD,
         @Field("empNo")   empNo:   String,
+        @Field("phoneNo") phoneNo: String,
         @Field("passwd")  newPwd:  String,
         @Field("motp")    motp:    String,
-        @Field("isApp")   isApp:   String = "Y",
-        @Field("version") version: String = "14"
+        @Field("isApp")   isApp:   String = "Y"
     ): ResponseBody  // ASIS 는 HTML 반환 → AsisLoginParser.parsePasswordReset() 로 파싱
 
     // =========================================================================
@@ -173,7 +174,7 @@ interface WhoAreYouApi {
     suspend fun searchEmployees(
         @Field("actnKey")    actnKey:   String = ApiConstants.ACTN_SEARCH,
         @Field("authKey")    authKey:   String,
-        @Field("keyword")    keyword:   String,
+        @Field(value = "keyword", encoded = true) keyword: String,
         @Field("phoneNo")    phoneNo:   String = "",
         @Field("isApp")      isApp:     String = "Y"
     ): ResponseBody  // ASIS 는 HTML 반환 → AsisSearchParser.parseEmployeeList() 로 파싱
@@ -243,18 +244,18 @@ interface WhoAreYouApi {
      *
      * @param actnKey    항상 "toggleFav" (ApiConstants.ACTN_TOGGLE_FAV)
      * @param authKey    현재 세션의 인증 키
-     * @param favrEmpNo  즐겨찾기를 토글할 대상 직원의 사번
+     * @param empNo      즐겨찾기를 토글할 대상 직원의 사번 (서버 파라미터명: empNo)
      * @param phoneNo    HRMS 등록 휴대폰번호 (하이픈 없이)
      * @param isApp      항상 "Y"
      */
     @FormUrlEncoded
     @POST(ApiConstants.ENDPOINT_SEARCH)
     suspend fun toggleFavorite(
-        @Field("actnKey")   actnKey:   String = ApiConstants.ACTN_TOGGLE_FAV,
-        @Field("authKey")   authKey:   String,
-        @Field("favrEmpNo") favrEmpNo: String,
-        @Field("phoneNo")   phoneNo:   String = "",
-        @Field("isApp")     isApp:     String = "Y"
+        @Field("actnKey")  actnKey:  String = ApiConstants.ACTN_TOGGLE_FAV,
+        @Field("authKey")  authKey:  String,
+        @Field("empNo")    empNo:    String,
+        @Field("phoneNo")  phoneNo:  String = "",
+        @Field("isApp")    isApp:    String = "Y"
     ): ResponseBody  // ASIS 는 HTML 반환 → AsisSearchParser.parseToggleFavorite() 로 파싱
 
     // =========================================================================

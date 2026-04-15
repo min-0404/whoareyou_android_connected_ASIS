@@ -46,10 +46,12 @@ fun TeamScreen(
     val scope     = rememberCoroutineScope()
 
     // ── 팀원 목록 로드 ─────────────────────────────────────────────────────
-    // 화면 진입 시 한 번 API 호출
+    // 팀원 목록 + 즐겨찾기 목록을 함께 로드하여 즐겨찾기 상태를 초기화합니다.
     LaunchedEffect(Unit) {
         isLoading = true
-        employees = EmployeeRepository.getMyTeam()
+        val teamList = EmployeeRepository.getMyTeam()
+        val favEmpNos = EmployeeRepository.getMyFavorites().map { it.empNo }.toSet()
+        employees = teamList.map { it.copy(isFavorite = it.empNo in favEmpNos) }
         isLoading = false
     }
 
@@ -191,7 +193,7 @@ fun TeamMemberRow(
         colors    = CardDefaults.cardColors(containerColor = CardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             // 프로필 행
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProfileAvatar(name = employee.name, size = 46, imgdata = employee.imgdata)
@@ -225,36 +227,40 @@ fun TeamMemberRow(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 전화 버튼 행
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 전화 버튼 행: 가운데 정렬, 고정 너비
+            Row(
+                modifier             = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Button(
                     onClick = {
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${employee.internalPhone}"))
                         context.startActivity(intent)
                     },
-                    modifier       = Modifier.weight(1f).height(28.dp),
+                    modifier       = Modifier.width(120.dp).height(34.dp),
                     shape          = RoundedCornerShape(8.dp),
                     colors         = ButtonDefaults.buttonColors(containerColor = SoftCallGreen),
-                    contentPadding = PaddingValues(horizontal = 6.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(11.dp))
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Icon(imageVector = Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "사내전화", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
+                Spacer(modifier = Modifier.width(10.dp))
                 Button(
                     onClick = {
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${employee.mobilePhone}"))
                         context.startActivity(intent)
                     },
-                    modifier       = Modifier.weight(1f).height(28.dp),
+                    modifier       = Modifier.width(120.dp).height(34.dp),
                     shape          = RoundedCornerShape(8.dp),
                     colors         = ButtonDefaults.buttonColors(containerColor = Primary),
-                    contentPadding = PaddingValues(horizontal = 6.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(11.dp))
-                    Spacer(modifier = Modifier.width(3.dp))
+                    Icon(imageVector = Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "휴대전화", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }

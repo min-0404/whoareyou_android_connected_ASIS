@@ -165,7 +165,7 @@ fun EmployeeDetailScreen(
                             modifier            = Modifier.fillMaxWidth().padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            ProfileAvatar(name = emp.name, size = 80, imgdata = emp.imgdata)
+                            ProfileAvatar(name = emp.name, size = 100, imgdata = emp.imgdata)
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(text = emp.name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(modifier = Modifier.height(4.dp))

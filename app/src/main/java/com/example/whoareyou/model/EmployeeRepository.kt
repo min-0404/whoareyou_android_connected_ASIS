@@ -6,9 +6,12 @@ import com.example.whoareyou.network.ApiConstants
 import com.example.whoareyou.network.AsisSearchParser
 import com.example.whoareyou.network.AuthManager
 import com.example.whoareyou.network.dto.Dept
+import com.example.whoareyou.network.dto.OrgSection
+import kotlinx.coroutines.CancellationException
 import okhttp3.ResponseBody
 import retrofit2.HttpException
 import java.io.IOException
+import java.net.URLEncoder
 import java.nio.charset.Charset
 
 /**
@@ -96,16 +99,28 @@ object EmployeeRepository {
         }
         val phoneNo = AuthManager.loginPhoneNo ?: ""
 
+        // 이전 오류 메시지 초기화 (이전 화면의 오류가 표시되지 않도록)
+        debugLastError = ""
+
+        // ASIS 서버는 EUC-KR 인코딩을 기대하므로 한글 키워드를 EUC-KR URL 인코딩으로 변환합니다.
+        val encodedKeyword = try {
+            URLEncoder.encode(keyword, "EUC-KR")
+        } catch (e: Exception) {
+            keyword  // 인코딩 실패 시 원본 키워드 사용
+        }
+
         return try {
             val body = ApiClient.api.searchEmployees(
                 actnKey = ApiConstants.ACTN_SEARCH,
                 authKey = authKey,
-                keyword = keyword,
+                keyword = encodedKeyword,
                 phoneNo = phoneNo
             )
             val html = body.eucKrString()
             storeDebug(html, "search")
             AsisSearchParser.parseEmployeeList(html)
+        } catch (e: CancellationException) {
+            throw e  // 코루틴 취소는 정상 흐름 — 잡지 않고 전파
         } catch (e: IOException) {
             debugLastError = "search() 네트워크 오류: ${e.message}"
             Log.e(TAG, "search() 네트워크 오류", e)
@@ -149,6 +164,8 @@ object EmployeeRepository {
             val html = body.eucKrString()
             storeDebug(html, "myFav")
             AsisSearchParser.parseFavoriteList(html)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: IOException) {
             debugLastError = "myFav 네트워크 오류: ${e.message}"
             Log.e(TAG, "getMyFavorites() 네트워크 오류", e)
@@ -194,6 +211,8 @@ object EmployeeRepository {
             val html = body.eucKrString()
             storeDebug(html, "myTeam")
             AsisSearchParser.parseTeamList(html)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: IOException) {
             debugLastError = "myTeam 네트워크 오류: ${e.message}"
             Log.e(TAG, "getMyTeam() 네트워크 오류", e)
@@ -228,9 +247,12 @@ object EmployeeRepository {
         }
         val phoneNo = AuthManager.loginPhoneNo ?: ""
 
+        // myTeam API 는 authKey 기준으로 로그인한 사용자의 팀을 반환하고 orgCd 를 무시합니다.
+        // 조직도 드릴다운에서는 organizaion API 에 해당 deptCode 를 전달하여
+        // 해당 부서의 실제 구성원을 가져와야 합니다.
         return try {
-            val body = ApiClient.api.getMyTeam(
-                actnKey = ApiConstants.ACTN_MY_TEAM,
+            val body = ApiClient.api.getOrganization(
+                actnKey = ApiConstants.ACTN_ORGANIZATION,
                 authKey = authKey,
                 orgCd   = orgCd,
                 phoneNo = phoneNo
@@ -321,10 +343,10 @@ object EmployeeRepository {
 
         return try {
             val body = ApiClient.api.toggleFavorite(
-                actnKey   = ApiConstants.ACTN_TOGGLE_FAV,
-                authKey   = authKey,
-                favrEmpNo = empNo,
-                phoneNo   = phoneNo
+                actnKey  = ApiConstants.ACTN_TOGGLE_FAV,
+                authKey  = authKey,
+                empNo    = empNo,
+                phoneNo  = phoneNo
             )
             val html = body.eucKrString()
             Log.d(TAG, "toggleFavorite() HTML 수신 (${html.length}자): ${html.take(300)}")
@@ -386,6 +408,51 @@ object EmployeeRepository {
             emptyList()
         } catch (e: Exception) {
             Log.e(TAG, "getOrganization() 예상치 못한 오류", e)
+            emptyList()
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 조직도 섹션 조회 (accordion 구조 파싱)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * organizaion API 응답에서 accordion 섹션 목록(CEO/감사/노동조합 등)을 가져옵니다.
+     *
+     * [getOrganization] 과 같은 API 를 호출하지만 [AsisSearchParser.parseOrgSections] 로
+     * 파싱하여 책임자 직원 + 하위 부서 목록이 담긴 [OrgSection] 을 반환합니다.
+     *
+     * @param orgCd 조회할 상위 조직 코드 (빈 문자열 = 루트 조직)
+     * @return 조직 섹션 목록. 오류 또는 미로그인 시 빈 리스트.
+     */
+    suspend fun getOrgSections(orgCd: String): List<OrgSection> {
+        val authKey = AuthManager.authKey ?: run {
+            Log.w(TAG, "getOrgSections() 호출 실패: authKey 없음")
+            return emptyList()
+        }
+        val phoneNo = AuthManager.loginPhoneNo ?: ""
+
+        return try {
+            val body = ApiClient.api.getOrganization(
+                actnKey = ApiConstants.ACTN_ORGANIZATION,
+                authKey = authKey,
+                orgCd   = orgCd,
+                phoneNo = phoneNo
+            )
+            val html = body.eucKrString()
+            storeDebug(html, "orgSections($orgCd)")
+            AsisSearchParser.parseOrgSections(html)
+        } catch (e: IOException) {
+            debugLastError = "orgSections 네트워크 오류: ${e.message}"
+            Log.e(TAG, "getOrgSections() 네트워크 오류", e)
+            emptyList()
+        } catch (e: HttpException) {
+            debugLastError = "orgSections HTTP ${e.code()}: ${e.message()}"
+            Log.e(TAG, "getOrgSections() HTTP 오류: ${e.code()}", e)
+            emptyList()
+        } catch (e: Exception) {
+            debugLastError = "orgSections 오류: ${e.javaClass.simpleName}: ${e.message}"
+            Log.e(TAG, "getOrgSections() 예상치 못한 오류", e)
             emptyList()
         }
     }

@@ -200,11 +200,7 @@ fun SearchScreen(
                 }
             }
             !hasSearched -> SearchEmptyPrompt()
-            results.isEmpty() -> SearchNoResults(
-                keyword    = queryValue.text.trim(),
-                debugHtml  = EmployeeRepository.debugLastHtml,
-                debugError = EmployeeRepository.debugLastError
-            )
+            results.isEmpty() -> SearchNoResults(keyword = queryValue.text.trim())
             else -> {
                 Text(
                     text       = "검색 결과 ${results.size}명",
@@ -251,7 +247,7 @@ private fun SearchEmptyPrompt() {
 }
 
 @Composable
-private fun SearchNoResults(keyword: String = "", debugHtml: String = "", debugError: String = "") {
+private fun SearchNoResults(keyword: String = "") {
     Column(
         modifier            = Modifier.fillMaxSize().padding(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -261,25 +257,24 @@ private fun SearchNoResults(keyword: String = "", debugHtml: String = "", debugE
             modifier         = Modifier.size(72.dp).clip(CircleShape).background(PrimaryLight),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Search, contentDescription = null, tint = Primary, modifier = Modifier.size(36.dp))
+            Icon(Icons.Default.SearchOff, contentDescription = null, tint = Primary, modifier = Modifier.size(36.dp))
         }
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text       = if (keyword.isNotBlank()) "\"$keyword\" 검색 결과가 없습니다" else "검색 결과가 없습니다",
-            fontSize   = 15.sp,
+            text       = if (keyword.isNotBlank()) "\"$keyword\"에 대한\n검색 결과가 없습니다" else "검색 결과가 없습니다",
+            fontSize   = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            color      = TextPrimary
+            color      = TextPrimary,
+            textAlign  = androidx.compose.ui.text.style.TextAlign.Center,
+            lineHeight = 24.sp
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("다른 검색어를 입력해보세요", fontSize = 14.sp, color = TextSecondary)
-        if (debugError.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("⚠ $debugError", fontSize = 11.sp, color = Color.Red)
-        }
-        if (debugHtml.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(debugHtml, fontSize = 10.sp, color = TextSecondary)
-        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text      = "맞춤법이나 다른 검색어로 다시 시도해보세요",
+            fontSize  = 14.sp,
+            color     = TextSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 

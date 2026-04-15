@@ -100,6 +100,29 @@ object ApiClient {
      */
     private val cookieJar: CookieJar = object : CookieJar {
         private val store = mutableMapOf<String, MutableList<Cookie>>()
+        // 앱 재시작 후 최초 요청 시 SharedPreferences에서 JSESSIONID 복원 (1회)
+        private var sessionRestored = false
+
+        private fun restoreSessionIfNeeded(host: String) {
+            if (sessionRestored) return
+            sessionRestored = true
+            try {
+                val savedId = AuthManager.jsessionId ?: return
+                val cookie = Cookie.Builder()
+                    .name("JSESSIONID")
+                    .value(savedId)
+                    .domain(host)
+                    .path("/")
+                    .build()
+                store.getOrPut(host) { mutableListOf() }.apply {
+                    removeAll { it.name == "JSESSIONID" }
+                    add(cookie)
+                }
+                Log.d(TAG, "JSESSIONID 복원 완료 [$host]")
+            } catch (e: Exception) {
+                Log.w(TAG, "JSESSIONID 복원 실패: ${e.message}")
+            }
+        }
 
         override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
             val host = url.host
@@ -110,11 +133,16 @@ object ApiClient {
                     add(newCookie)
                 }
             }
+            // JSESSIONID 를 SharedPreferences 에 영속화 (앱 재시작 후 복원용)
+            cookies.firstOrNull { it.name == "JSESSIONID" }?.let { cookie ->
+                try { AuthManager.jsessionId = cookie.value } catch (_: Exception) {}
+            }
             Log.d(TAG, "쿠키 저장 [$host]: ${cookies.map { "${it.name}=${it.value}" }}")
         }
 
         override fun loadForRequest(url: HttpUrl): List<Cookie> {
             val host = url.host
+            restoreSessionIfNeeded(host)
             val cookies = store[host] ?: emptyList()
             Log.d(TAG, "쿠키 전송 [$host]: ${cookies.map { it.name }}")
             return cookies
