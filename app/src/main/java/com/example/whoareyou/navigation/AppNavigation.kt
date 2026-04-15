@@ -55,6 +55,10 @@ sealed class Screen(val route: String) {
     object PhoneSettings  : Screen("phone_settings")
     object AddPhone       : Screen("add_phone")
     object CallHistory    : Screen("call_history")
+    object OrgTeamMembers : Screen("org_team/{orgCd}/{deptName}") {
+        fun createRoute(orgCd: String, deptName: String) =
+            "org_team/${java.net.URLEncoder.encode(orgCd, "UTF-8")}/${java.net.URLEncoder.encode(deptName, "UTF-8")}"
+    }
 }
 
 // 하단 내비바를 표시할 주요 화면 목록
@@ -189,7 +193,32 @@ fun AppNavigation() {
                 composable(Screen.OrgChart.route) {
                     OrgChartScreen(
                         onNavigateToDetail = { empNo -> navController.navigate(Screen.EmployeeDetail.createRoute(empNo)) },
+                        onNavigateToTeam   = { orgCd, deptName ->
+                            navController.navigate(Screen.OrgTeamMembers.createRoute(orgCd, deptName))
+                        },
                         onBack = { navController.popBackStack() }
+                    )
+                }
+
+                // 조직도 팀원 목록 (조직도 → 팀 클릭 시 이동)
+                composable(
+                    route     = Screen.OrgTeamMembers.route,
+                    arguments = listOf(
+                        navArgument("orgCd")    { type = NavType.StringType },
+                        navArgument("deptName") { type = NavType.StringType }
+                    )
+                ) { entry ->
+                    val orgCd    = java.net.URLDecoder.decode(
+                        entry.arguments?.getString("orgCd") ?: "", "UTF-8"
+                    )
+                    val deptName = java.net.URLDecoder.decode(
+                        entry.arguments?.getString("deptName") ?: "", "UTF-8"
+                    )
+                    OrgTeamMembersScreen(
+                        orgCd              = orgCd,
+                        deptName           = deptName,
+                        onNavigateToDetail = { empNo -> navController.navigate(Screen.EmployeeDetail.createRoute(empNo)) },
+                        onBack             = { navController.popBackStack() }
                     )
                 }
 

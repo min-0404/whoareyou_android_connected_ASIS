@@ -247,9 +247,9 @@ object EmployeeRepository {
         }
         val phoneNo = AuthManager.loginPhoneNo ?: ""
 
-        // myTeam API 는 authKey 기준으로 로그인한 사용자의 팀을 반환하고 orgCd 를 무시합니다.
-        // 조직도 드릴다운에서는 organizaion API 에 해당 deptCode 를 전달하여
-        // 해당 부서의 실제 구성원을 가져와야 합니다.
+        // organizaion API 에 팀 단위 orgCd 를 전달하면 accordion-inner 에 goEmpDetail 블록이 포함됩니다.
+        // parseTeamList 는 이 goEmpDetail 블록에서 팀원을 추출합니다.
+        // (본부 단위 orgCd 를 전달하면 goDeptList 만 반환되어 parseTeamList 결과가 비어있습니다 — 정상)
         return try {
             val body = ApiClient.api.getOrganization(
                 actnKey = ApiConstants.ACTN_ORGANIZATION,
